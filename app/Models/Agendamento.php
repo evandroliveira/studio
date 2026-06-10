@@ -11,6 +11,7 @@ class Agendamento extends Model
         'data',
         'horario',
         'servico',
+        'profissional',
     ];
 
     public function user()

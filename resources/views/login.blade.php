@@ -10,7 +10,46 @@
         .video-bg { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; z-index: -1; }
         .overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 0; }
         .login-container { position: relative; z-index: 1; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-        .card { background: rgba(255,255,255,0.95); border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.2); }
+        .card {
+            background: rgba(255,255,255,0.48);
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.14);
+            color: #1f1f1f;
+        }
+
+        .card .form-label,
+        .card h3 {
+            color: #1f1f1f;
+        }
+
+        .card .form-control {
+            background: rgba(255, 255, 255, 0.72);
+            border-color: rgba(0, 0, 0, 0.12);
+            color: #1f1f1f;
+        }
+
+        .card .form-control::placeholder {
+            color: rgba(31, 31, 31, 0.6);
+        }
+
+        .card .form-control:focus {
+            background: rgba(255, 255, 255, 0.86);
+            border-color: rgba(31, 31, 31, 0.3);
+            box-shadow: 0 0 0 0.2rem rgba(31, 31, 31, 0.12);
+        }
+
+        .card .btn-dark {
+            background-color: rgba(31, 31, 31, 0.92);
+            border-color: rgba(31, 31, 31, 0.92);
+        }
+
+        .card .btn-dark:hover {
+            background-color: rgba(31, 31, 31, 1);
+            border-color: rgba(31, 31, 31, 1);
+        }
     </style>
 </head>
 <body>

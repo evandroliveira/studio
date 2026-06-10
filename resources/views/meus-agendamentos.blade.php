@@ -31,6 +31,7 @@
                             <th>Data</th>
                             <th>Horário</th>
                             <th>Serviço</th>
+                            <th>Profissional</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -39,6 +40,7 @@
                                 <td>{{ \Carbon\Carbon::parse($agendamento->data)->format('d/m/Y') }}</td>
                                 <td>{{ substr($agendamento->horario,0,5) }}</td>
                                 <td>{{ $agendamento->servico }}</td>
+                                <td>{{ $agendamento->profissional ?? '-' }}</td>
                             </tr>
                         @endforeach
                     </tbody>
