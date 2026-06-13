@@ -50,6 +50,28 @@
             background-color: rgba(31, 31, 31, 1);
             border-color: rgba(31, 31, 31, 1);
         }
+
+        .auth-links {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            font-size: 0.92rem;
+            flex-wrap: wrap;
+        }
+
+        .auth-links a,
+        .form-check-label,
+        .form-check-input {
+            color: #1f1f1f;
+        }
+
+        .auth-links a {
+            text-decoration: none;
+        }
+
+        .auth-links a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -60,19 +82,43 @@
     <div class="overlay"></div>
     <div class="login-container">
         <div class="card p-4" style="min-width:320px;max-width:400px;width:100%;">
-            <h3 class="mb-3 text-center">Entrar no Studio Franciele Cesario</h3>
-            <form method="POST" action="/login">
+            <h3 class="mb-3 text-center">Studio Franciele Cesario</h3>
+
+            @if(session('status'))
+                <div class="alert alert-success">{{ session('status') }}</div>
+            @endif
+
+            @if($errors->any())
+                <div class="alert alert-danger">
+                    <ul class="mb-0 ps-3">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            <form method="POST" action="{{ route('login') }}">
                 @csrf
                 <div class="mb-3">
                     <label for="email" class="form-label">E-mail</label>
-                    <input type="email" class="form-control" id="email" name="email" required autofocus>
+                    <input type="email" class="form-control" id="email" name="email" value="{{ old('email') }}" required autofocus>
                 </div>
                 <div class="mb-3">
                     <label for="password" class="form-label">Senha</label>
                     <input type="password" class="form-control" id="password" name="password" required>
                 </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" value="1" id="remember" name="remember" @checked(old('remember'))>
+                    <label class="form-check-label" for="remember">Manter conectado</label>
+                </div>
                 <button type="submit" class="btn btn-dark w-100">Entrar</button>
             </form>
+
+            <div class="auth-links mt-3">
+                <a href="{{ route('password.request') }}">Esqueci a senha</a>
+                <a href="{{ route('register') }}">Novo cliente</a>
+            </div>
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

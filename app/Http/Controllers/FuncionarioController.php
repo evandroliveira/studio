@@ -2,64 +2,46 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Agendamento;
 use App\Models\Funcionario;
 use Illuminate\Http\Request;
 
 class FuncionarioController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        //
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        //
+        $validated = $request->validate([
+            'nome' => ['required', 'string', 'max:255', 'unique:funcionarios,nome'],
+        ]);
+
+        Funcionario::create($validated);
+
+        return back()->with('success', 'Profissional cadastrado com sucesso.');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Funcionario $funcionario)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Funcionario $funcionario)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Funcionario $funcionario)
     {
-        //
+        $validated = $request->validate([
+            'nome' => ['required', 'string', 'max:255', 'unique:funcionarios,nome,' . $funcionario->id],
+        ]);
+
+        $funcionario->update($validated);
+
+        return back()->with('success', 'Profissional atualizado com sucesso.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Funcionario $funcionario)
     {
-        //
+        $temAgendamento = Agendamento::where('funcionario_id', $funcionario->id)->exists();
+
+        if ($temAgendamento) {
+            return back()->withErrors([
+                'funcionarios' => 'Nao e possivel excluir este profissional porque ja existe agendamento vinculado.',
+            ]);
+        }
+
+        $funcionario->delete();
+
+        return back()->with('success', 'Profissional removido com sucesso.');
     }
 }

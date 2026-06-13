@@ -39,14 +39,22 @@
                             <tr>
                                 <td>{{ \Carbon\Carbon::parse($agendamento->data)->format('d/m/Y') }}</td>
                                 <td>{{ substr($agendamento->horario,0,5) }}</td>
-                                <td>{{ $agendamento->servico }}</td>
-                                <td>{{ $agendamento->profissional ?? '-' }}</td>
+                                <td>
+                                    {{ $agendamento->servicoModel->nome ?? $agendamento->servico }}
+                                    @if($agendamento->servicoModel)
+                                        <br><small class="text-muted">R$ {{ number_format($agendamento->servicoModel->valor, 2, ',', '.') }}</small>
+                                    @endif
+                                </td>
+                                <td>{{ $agendamento->funcionario->nome ?? $agendamento->profissional ?? '-' }}</td>
                             </tr>
                         @endforeach
                     </tbody>
                 </table>
             @endif
-            <a href="/agendamento" class="btn btn-dark mt-3 w-100">Novo Agendamento</a>
+            <a href="{{ route('agendamento.create') }}" class="btn btn-dark mt-3 w-100">Novo Agendamento</a>
+            @can('access-owner-area')
+                <a href="{{ route('owner.dashboard') }}" class="btn btn-outline-dark mt-2 w-100">Area da dona</a>
+            @endcan
             <form method="POST" action="/logout" class="mt-2">
                 @csrf
                 <button type="submit" class="btn btn-outline-danger w-100">Sair</button>

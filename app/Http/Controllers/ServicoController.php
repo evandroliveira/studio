@@ -2,64 +2,48 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Agendamento;
 use App\Models\Servico;
 use Illuminate\Http\Request;
 
 class ServicoController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        //
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        //
+        $validated = $request->validate([
+            'nome' => ['required', 'string', 'max:255', 'unique:servicos,nome'],
+            'valor' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        Servico::create($validated);
+
+        return back()->with('success', 'Servico cadastrado com sucesso.');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Servico $servico)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Servico $servico)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Servico $servico)
     {
-        //
+        $validated = $request->validate([
+            'nome' => ['required', 'string', 'max:255', 'unique:servicos,nome,' . $servico->id],
+            'valor' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        $servico->update($validated);
+
+        return back()->with('success', 'Servico atualizado com sucesso.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Servico $servico)
     {
-        //
+        $temAgendamento = Agendamento::where('servico_id', $servico->id)->exists();
+
+        if ($temAgendamento) {
+            return back()->withErrors([
+                'servicos' => 'Nao e possivel excluir este servico porque ja existe agendamento vinculado.',
+            ]);
+        }
+
+        $servico->delete();
+
+        return back()->with('success', 'Servico removido com sucesso.');
     }
 }

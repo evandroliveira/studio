@@ -108,6 +108,10 @@
         .card .btn-dark:hover { background: linear-gradient(135deg, #c67b93, #9a5770); border-color: #9a5770; }
         .card .btn-outline-secondary { color: #8f4d62; border-color: rgba(185, 111, 134, 0.42); background: rgba(255, 255, 255, 0.58); }
         .card .btn-outline-secondary:hover { color: #fff; background: #b96f86; border-color: #b96f86; }
+        .slot-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+        .slot-btn { border: 1px solid rgba(185, 111, 134, 0.45); background: rgba(255,255,255,0.75); color: #6f3d4f; border-radius: 10px; padding: 6px 8px; font-weight: 600; font-size: 0.85rem; }
+        .slot-btn.selected { background: linear-gradient(135deg, #b96f86, #8f4d62); color: #fff; border-color: #8f4d62; }
+        .slot-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
         @media (max-width: 576px) {
             .agendamento-container { padding: 12px; }
@@ -191,14 +195,17 @@
                 <div class="step"><div class="step-indicator">4</div><span>Confirmar</span></div>
             </div>
 
-            <form method="POST" action="/agendamento" id="agendamento-form">
+            <form method="POST" action="{{ route('agendamento.store') }}" id="agendamento-form">
                 @csrf
-                <input type="hidden" name="data" value="{{ now()->toDateString() }}">
 
                 <div class="wizard-step active" data-step="1">
                     <div class="mb-3">
+                        <label for="data" class="form-label">Escolha a data</label>
+                        <input type="date" class="form-control" id="data" name="data" value="{{ old('data', now()->toDateString()) }}" min="{{ now()->toDateString() }}" required>
+                    </div>
+                    <div class="mb-3">
                         <label for="horario" class="form-label">Escolha o horário</label>
-                        <input type="text" class="form-control" id="horario" name="horario" inputmode="numeric" placeholder="00:00" maxlength="5" pattern="^([01]?[0-9]|2[0-3]):[0-5][0-9]$" required>
+                        <input type="text" class="form-control" id="horario" name="horario" inputmode="numeric" placeholder="00:00" maxlength="5" pattern="^([01]?[0-9]|2[0-3]):[0-5][0-9]$" value="{{ old('horario') }}" required>
                     </div>
                     <button type="button" class="btn btn-dark w-100" id="next-to-service">Próximo</button>
                 </div>
@@ -206,14 +213,17 @@
                 <div class="wizard-step" data-step="2">
                     <div class="mb-3">
                         <label for="servico" class="form-label">Escolha o serviço</label>
-                        <select class="form-select" id="servico" name="servico" required>
+                        <select class="form-select" id="servico" name="servico_id" required>
                             <option value="">Selecione...</option>
-                            <option value="Corte de cabelo">Corte de cabelo</option>
-                            <option value="Coloração">Coloração</option>
-                            <option value="Manicure">Manicure</option>
-                            <option value="Pedicure">Pedicure</option>
-                            <option value="Sobrancelha">Sobrancelha</option>
+                            @foreach($servicos as $servico)
+                                <option value="{{ $servico->id }}" data-nome="{{ $servico->nome }}" data-valor="{{ number_format($servico->valor, 2, ',', '.') }}" @selected(old('servico_id') == $servico->id)>
+                                    {{ $servico->nome }} - R$ {{ number_format($servico->valor, 2, ',', '.') }}
+                                </option>
+                            @endforeach
                         </select>
+                        @if($servicos->isEmpty())
+                            <small class="text-danger d-block mt-2">Nenhum serviço cadastrado. Solicite cadastro para a dona do salão.</small>
+                        @endif
                     </div>
                     <div class="wizard-actions">
                         <button type="button" class="btn btn-outline-secondary w-50" id="back-to-time">Voltar</button>
@@ -224,13 +234,23 @@
                 <div class="wizard-step" data-step="3">
                     <div class="mb-3">
                         <label for="profissional" class="form-label">Escolha a profissional</label>
-                        <select class="form-select" id="profissional" name="profissional" required>
+                        <select class="form-select" id="profissional" name="funcionario_id" required>
                             <option value="">Selecione...</option>
-                            <option value="Franciele">Franciele</option>
-                            <option value="Camila">Camila</option>
-                            <option value="Juliana">Juliana</option>
-                            <option value="Mariana">Mariana</option>
+                            @foreach($funcionarios as $funcionario)
+                                <option value="{{ $funcionario->id }}" @selected(old('funcionario_id') == $funcionario->id)>
+                                    {{ $funcionario->nome }}
+                                </option>
+                            @endforeach
                         </select>
+                        @if($funcionarios->isEmpty())
+                            <small class="text-danger d-block mt-2">Nenhum profissional cadastrado. Solicite cadastro para a dona do salão.</small>
+                        @endif
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Horarios disponiveis para a data selecionada</label>
+                        <div id="slots-loading" class="small text-muted mb-2 d-none">Carregando horarios...</div>
+                        <div id="slots-empty" class="small text-muted mb-2">Selecione uma profissional para ver os horarios livres.</div>
+                        <div id="slot-grid" class="slot-grid"></div>
                     </div>
                     <div class="wizard-actions">
                         <button type="button" class="btn btn-outline-secondary w-50" id="back-to-service">Voltar</button>
@@ -264,10 +284,16 @@
                     <p class="mb-3 text-center">Confira os dados e confirme para finalizar o agendamento.</p>
                     <div class="wizard-actions">
                         <button type="button" class="btn btn-outline-secondary w-50" id="back-to-professional">Voltar</button>
-                        <button type="submit" class="btn btn-dark w-50">Confirmar agendamento</button>
+                        <button type="submit" class="btn btn-dark w-50" {{ $servicos->isEmpty() || $funcionarios->isEmpty() ? 'disabled' : '' }}>Confirmar agendamento</button>
                     </div>
                 </div>
             </form>
+            <div class="mt-3 d-flex gap-2">
+                <a href="{{ route('agendamento.meus') }}" class="btn btn-outline-secondary w-100">Meus agendamentos</a>
+                @can('access-owner-area')
+                    <a href="{{ route('owner.dashboard') }}" class="btn btn-dark w-100">Area da dona</a>
+                @endcan
+            </div>
         </div>
     </div>
     <script>
@@ -277,12 +303,15 @@
         const horarioField = document.getElementById('horario');
         const servicoField = document.getElementById('servico');
         const profissionalField = document.getElementById('profissional');
-        const dataField = document.querySelector('input[name="data"]');
+        const dataField = document.getElementById('data');
 
         const summaryHorario = document.getElementById('summary-horario');
         const summaryServico = document.getElementById('summary-servico');
         const summaryProfissional = document.getElementById('summary-profissional');
         const summaryData = document.getElementById('summary-data');
+        const slotsLoading = document.getElementById('slots-loading');
+        const slotsEmpty = document.getElementById('slots-empty');
+        const slotGrid = document.getElementById('slot-grid');
 
         function showStep(stepNumber) {
             steps.forEach((step) => {
@@ -321,6 +350,66 @@
             return `${parts[2]}/${parts[1]}/${parts[0]}`;
         }
 
+        function buildSlots(disponiveis) {
+            slotGrid.innerHTML = '';
+
+            if (!disponiveis.length) {
+                slotsEmpty.textContent = 'Nao ha horarios disponiveis para essa data e profissional.';
+                slotsEmpty.classList.remove('d-none');
+                return;
+            }
+
+            slotsEmpty.classList.add('d-none');
+
+            disponiveis.forEach((horario) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = `slot-btn ${horarioField.value === horario ? 'selected' : ''}`;
+                button.textContent = horario;
+                button.addEventListener('click', () => {
+                    horarioField.value = horario;
+                    document.querySelectorAll('.slot-btn').forEach((btn) => btn.classList.remove('selected'));
+                    button.classList.add('selected');
+                });
+
+                slotGrid.appendChild(button);
+            });
+        }
+
+        async function loadSlots() {
+            if (!dataField.value || !profissionalField.value) {
+                slotsEmpty.textContent = 'Selecione uma profissional para ver os horarios livres.';
+                slotsEmpty.classList.remove('d-none');
+                slotGrid.innerHTML = '';
+                return;
+            }
+
+            slotsLoading.classList.remove('d-none');
+            slotsEmpty.classList.add('d-none');
+
+            try {
+                const params = new URLSearchParams({
+                    data: dataField.value,
+                    funcionario_id: profissionalField.value,
+                });
+
+                const response = await fetch(`{{ route('agendamento.horarios') }}?${params.toString()}`);
+
+                if (!response.ok) {
+                    throw new Error('Falha ao carregar horarios');
+                }
+
+                const payload = await response.json();
+                buildSlots(payload.disponiveis || []);
+            } catch (error) {
+                slotGrid.innerHTML = '';
+                slotsEmpty.textContent = 'Nao foi possivel carregar os horarios no momento.';
+                slotsEmpty.classList.remove('d-none');
+            } finally {
+                slotsLoading.classList.add('d-none');
+            }
+        }
+
         horarioField.addEventListener('input', () => {
             horarioField.value = formatHorario(horarioField.value);
         });
@@ -328,6 +417,11 @@
         document.getElementById('next-to-service').addEventListener('click', () => {
             if (!horarioField.value) {
                 horarioField.reportValidity();
+                return;
+            }
+
+            if (!dataField.value) {
+                dataField.reportValidity();
                 return;
             }
 
@@ -341,6 +435,7 @@
             }
 
             showStep(3);
+            loadSlots();
         });
 
         document.getElementById('review-agendamento').addEventListener('click', () => {
@@ -350,7 +445,11 @@
             }
 
             summaryHorario.textContent = horarioField.value;
-            summaryServico.textContent = servicoField.options[servicoField.selectedIndex].text;
+            const servicoSelecionado = servicoField.options[servicoField.selectedIndex];
+            const nomeServico = servicoSelecionado?.dataset.nome || servicoSelecionado.text;
+            const valorServico = servicoSelecionado?.dataset.valor ? ` - R$ ${servicoSelecionado.dataset.valor}` : '';
+
+            summaryServico.textContent = `${nomeServico}${valorServico}`;
             summaryProfissional.textContent = profissionalField.options[profissionalField.selectedIndex].text;
             summaryData.textContent = formatDate(dataField.value);
 
@@ -360,6 +459,8 @@
         document.getElementById('back-to-time').addEventListener('click', () => showStep(1));
         document.getElementById('back-to-service').addEventListener('click', () => showStep(2));
         document.getElementById('back-to-professional').addEventListener('click', () => showStep(3));
+        profissionalField.addEventListener('change', loadSlots);
+        dataField.addEventListener('change', loadSlots);
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
