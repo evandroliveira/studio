@@ -12,80 +12,143 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('servicos', function (Blueprint $table) {
-            $table->string('nome')->nullable()->after('id');
-            $table->decimal('valor', 10, 2)->default(0)->after('nome');
-        });
+        $servicosHasTable = Schema::hasTable('servicos');
+        $funcionariosHasTable = Schema::hasTable('funcionarios');
+        $agendamentosHasTable = Schema::hasTable('agendamentos');
 
-        Schema::table('funcionarios', function (Blueprint $table) {
-            $table->string('nome')->nullable()->after('id');
-        });
+        if ($servicosHasTable) {
+            $servicosNeedsNome = ! Schema::hasColumn('servicos', 'nome');
+            $servicosNeedsValor = ! Schema::hasColumn('servicos', 'valor');
 
-        Schema::table('agendamentos', function (Blueprint $table) {
-            $table->foreignId('servico_id')->nullable()->after('user_id')->constrained('servicos')->nullOnDelete();
-            $table->foreignId('funcionario_id')->nullable()->after('servico_id')->constrained('funcionarios')->nullOnDelete();
-        });
-
-        DB::table('agendamentos')
-            ->whereNotNull('servico')
-            ->select('id', 'servico')
-            ->orderBy('id')
-            ->chunkById(100, function ($agendamentos) {
-                foreach ($agendamentos as $agendamento) {
-                    if (! $agendamento->servico) {
-                        continue;
+            if ($servicosNeedsNome || $servicosNeedsValor) {
+                Schema::table('servicos', function (Blueprint $table) use ($servicosNeedsNome, $servicosNeedsValor) {
+                    if ($servicosNeedsNome) {
+                        $table->string('nome')->nullable();
                     }
 
-                    $servicoId = DB::table('servicos')->where('nome', $agendamento->servico)->value('id');
-
-                    if (! $servicoId) {
-                        $servicoId = DB::table('servicos')->insertGetId([
-                            'nome' => $agendamento->servico,
-                            'valor' => 0,
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ]);
+                    if ($servicosNeedsValor) {
+                        $table->decimal('valor', 10, 2)->default(0);
                     }
+                });
+            }
+        }
 
-                    DB::table('agendamentos')->where('id', $agendamento->id)->update(['servico_id' => $servicoId]);
-                }
+        if ($funcionariosHasTable && ! Schema::hasColumn('funcionarios', 'nome')) {
+            Schema::table('funcionarios', function (Blueprint $table) {
+                $table->string('nome')->nullable();
             });
+        }
 
-        DB::table('agendamentos')
-            ->whereNotNull('profissional')
-            ->select('id', 'profissional')
-            ->orderBy('id')
-            ->chunkById(100, function ($agendamentos) {
-                foreach ($agendamentos as $agendamento) {
-                    if (! $agendamento->profissional) {
-                        continue;
+        if ($agendamentosHasTable) {
+            if (! Schema::hasColumn('agendamentos', 'servico_id')) {
+                Schema::table('agendamentos', function (Blueprint $table) {
+                    $table->foreignId('servico_id')->nullable()->constrained('servicos')->nullOnDelete();
+                });
+            }
+
+            if (! Schema::hasColumn('agendamentos', 'funcionario_id')) {
+                Schema::table('agendamentos', function (Blueprint $table) {
+                    $table->foreignId('funcionario_id')->nullable()->constrained('funcionarios')->nullOnDelete();
+                });
+            }
+        }
+
+        if (
+            $agendamentosHasTable
+            && $servicosHasTable
+            && Schema::hasColumn('agendamentos', 'servico')
+            && Schema::hasColumn('agendamentos', 'servico_id')
+            && Schema::hasColumn('servicos', 'nome')
+        ) {
+            DB::table('agendamentos')
+                ->whereNotNull('servico')
+                ->select('id', 'servico')
+                ->orderBy('id')
+                ->chunkById(100, function ($agendamentos) {
+                    foreach ($agendamentos as $agendamento) {
+                        if (! $agendamento->servico) {
+                            continue;
+                        }
+
+                        $servicoId = DB::table('servicos')->where('nome', $agendamento->servico)->value('id');
+
+                        if (! $servicoId) {
+                            $servicoId = DB::table('servicos')->insertGetId([
+                                'nome' => $agendamento->servico,
+                                'valor' => 0,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+                        }
+
+                        DB::table('agendamentos')->where('id', $agendamento->id)->update(['servico_id' => $servicoId]);
                     }
+                });
+        }
 
-                    $funcionarioId = DB::table('funcionarios')->where('nome', $agendamento->profissional)->value('id');
+        if (
+            $agendamentosHasTable
+            && $funcionariosHasTable
+            && Schema::hasColumn('agendamentos', 'profissional')
+            && Schema::hasColumn('agendamentos', 'funcionario_id')
+            && Schema::hasColumn('funcionarios', 'nome')
+        ) {
+            DB::table('agendamentos')
+                ->whereNotNull('profissional')
+                ->select('id', 'profissional')
+                ->orderBy('id')
+                ->chunkById(100, function ($agendamentos) {
+                    foreach ($agendamentos as $agendamento) {
+                        if (! $agendamento->profissional) {
+                            continue;
+                        }
 
-                    if (! $funcionarioId) {
-                        $funcionarioId = DB::table('funcionarios')->insertGetId([
-                            'nome' => $agendamento->profissional,
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ]);
+                        $funcionarioId = DB::table('funcionarios')->where('nome', $agendamento->profissional)->value('id');
+
+                        if (! $funcionarioId) {
+                            $funcionarioId = DB::table('funcionarios')->insertGetId([
+                                'nome' => $agendamento->profissional,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+                        }
+
+                        DB::table('agendamentos')->where('id', $agendamento->id)->update(['funcionario_id' => $funcionarioId]);
                     }
+                });
+        }
 
-                    DB::table('agendamentos')->where('id', $agendamento->id)->update(['funcionario_id' => $funcionarioId]);
-                }
+        if (
+            $servicosHasTable
+            && Schema::hasColumn('servicos', 'nome')
+            && ! Schema::hasIndex('servicos', 'servicos_nome_unique', 'unique')
+        ) {
+            Schema::table('servicos', function (Blueprint $table) {
+                $table->unique('nome');
             });
+        }
 
-        Schema::table('servicos', function (Blueprint $table) {
-            $table->unique('nome');
-        });
+        if (
+            $funcionariosHasTable
+            && Schema::hasColumn('funcionarios', 'nome')
+            && ! Schema::hasIndex('funcionarios', 'funcionarios_nome_unique', 'unique')
+        ) {
+            Schema::table('funcionarios', function (Blueprint $table) {
+                $table->unique('nome');
+            });
+        }
 
-        Schema::table('funcionarios', function (Blueprint $table) {
-            $table->unique('nome');
-        });
-
-        Schema::table('agendamentos', function (Blueprint $table) {
-            $table->unique(['data', 'horario', 'funcionario_id'], 'agendamentos_data_horario_funcionario_unique');
-        });
+        if (
+            $agendamentosHasTable
+            && Schema::hasColumn('agendamentos', 'data')
+            && Schema::hasColumn('agendamentos', 'horario')
+            && Schema::hasColumn('agendamentos', 'funcionario_id')
+            && ! Schema::hasIndex('agendamentos', 'agendamentos_data_horario_funcionario_unique', 'unique')
+        ) {
+            Schema::table('agendamentos', function (Blueprint $table) {
+                $table->unique(['data', 'horario', 'funcionario_id'], 'agendamentos_data_horario_funcionario_unique');
+            });
+        }
     }
 
     /**

@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('agendamentos', function (Blueprint $table) {
-            $table->string('profissional')->nullable()->after('servico');
-        });
+        if (Schema::hasTable('agendamentos') && ! Schema::hasColumn('agendamentos', 'profissional')) {
+            Schema::table('agendamentos', function (Blueprint $table) {
+                $table->string('profissional')->nullable()->after('servico');
+            });
+        }
     }
 
     /**
@@ -21,8 +23,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('agendamentos', function (Blueprint $table) {
-            $table->dropColumn('profissional');
-        });
+        if (Schema::hasTable('agendamentos') && Schema::hasColumn('agendamentos', 'profissional')) {
+            Schema::table('agendamentos', function (Blueprint $table) {
+                $table->dropColumn('profissional');
+            });
+        }
     }
 };
