@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\QueryException;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
@@ -11,21 +12,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (! Schema::hasTable('cache')) {
-            Schema::create('cache', function (Blueprint $table) {
-                $table->string('key')->primary();
-                $table->mediumText('value');
-                $table->integer('expiration')->index();
-            });
-        }
+        $this->createTableIfMissing('cache', function (Blueprint $table) {
+            $table->string('key')->primary();
+            $table->mediumText('value');
+            $table->integer('expiration')->index();
+        });
 
-        if (! Schema::hasTable('cache_locks')) {
-            Schema::create('cache_locks', function (Blueprint $table) {
-                $table->string('key')->primary();
-                $table->string('owner');
-                $table->integer('expiration')->index();
-            });
-        }
+        $this->createTableIfMissing('cache_locks', function (Blueprint $table) {
+            $table->string('key')->primary();
+            $table->string('owner');
+            $table->integer('expiration')->index();
+        });
     }
 
     /**
@@ -35,5 +32,26 @@ return new class extends Migration
     {
         Schema::dropIfExists('cache');
         Schema::dropIfExists('cache_locks');
+    }
+
+    private function createTableIfMissing(string $table, \Closure $callback): void
+    {
+        if (Schema::hasTable($table)) {
+            return;
+        }
+
+        try {
+            Schema::create($table, $callback);
+        } catch (QueryException $e) {
+            if (! $this->isDuplicateTableError($e)) {
+                throw $e;
+            }
+        }
+    }
+
+    private function isDuplicateTableError(QueryException $e): bool
+    {
+        return $e->getCode() === '42S01'
+            || str_contains(strtolower($e->getMessage()), 'already exists');
     }
 };
