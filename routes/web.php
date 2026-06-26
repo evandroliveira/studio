@@ -7,9 +7,12 @@ use App\Http\Controllers\ServicoController;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 
@@ -152,6 +155,126 @@ Route::post('/logout', function (Request $request) {
     $request->session()->regenerateToken();
     return redirect('/login');
 })->name('logout');
+
+Route::get('/diagnostico-hospedagem', function () {
+    $requiredSchema = [
+        'users' => ['name', 'email', 'password'],
+        'servicos' => ['nome', 'valor'],
+        'funcionarios' => ['nome'],
+        'agendamentos' => ['user_id', 'data', 'horario', 'servico', 'profissional', 'servico_id', 'funcionario_id'],
+    ];
+
+    if (config('session.driver') === 'database') {
+        $requiredSchema['sessions'] = ['id', 'payload'];
+    }
+
+    if (config('cache.default') === 'database') {
+        $requiredSchema['cache'] = ['key', 'value'];
+    }
+
+    if (config('queue.default') === 'database') {
+        $requiredSchema['jobs'] = ['queue', 'payload'];
+    }
+
+    $schemaStatus = [];
+    $missingItems = [];
+    $schemaCheckError = null;
+
+    try {
+        foreach ($requiredSchema as $table => $columns) {
+            $tableExists = Schema::hasTable($table);
+            $missingColumns = [];
+
+            if ($tableExists) {
+                foreach ($columns as $column) {
+                    if (! Schema::hasColumn($table, $column)) {
+                        $missingColumns[] = $column;
+                        $missingItems[] = $table.'.'.$column;
+                    }
+                }
+            } else {
+                $missingItems[] = $table;
+            }
+
+            $schemaStatus[$table] = [
+                'exists' => $tableExists,
+                'missing_columns' => $missingColumns,
+            ];
+
+        }
+
+    } catch (\Throwable $e) {
+        $schemaCheckError = [
+            'exception' => class_basename($e),
+            'message' => $e->getMessage(),
+        ];
+    }
+
+    $databaseStatus = [
+        'connected' => false,
+        'query_test' => false,
+    ];
+
+    try {
+        DB::select('select 1 as ok');
+        $databaseStatus['connected'] = true;
+        $databaseStatus['query_test'] = true;
+    } catch (\Throwable $e) {
+        $databaseStatus['error'] = class_basename($e);
+    }
+
+    $loggingStatus = [
+        'channel' => config('logging.default'),
+        'stack' => env('LOG_STACK'),
+        'laravel_log_exists' => file_exists(storage_path('logs/laravel.log')),
+        'storage_logs_writable' => is_dir(storage_path('logs')) && is_writable(storage_path('logs')),
+    ];
+
+    try {
+        error_log('SalaoBeauty diagnostico-hospedagem acessado');
+        $loggingStatus['php_error_log_write'] = true;
+    } catch (\Throwable $e) {
+        $loggingStatus['php_error_log_write'] = false;
+    }
+
+    try {
+        Log::warning('Diagnostico hospedagem acessado.', ['path' => request()->path()]);
+        $loggingStatus['laravel_log_write'] = true;
+    } catch (\Throwable $e) {
+        $loggingStatus['laravel_log_write'] = false;
+        $loggingStatus['laravel_log_error'] = class_basename($e);
+    }
+
+    return response()->json([
+        'build' => '2026-06-26-diagnostic-v1',
+        'app' => [
+            'env' => app()->environment(),
+            'debug' => config('app.debug'),
+            'url' => config('app.url'),
+            'php' => PHP_VERSION,
+            'laravel' => app()->version(),
+        ],
+        'paths' => [
+            'register' => route('register', [], false),
+            'agendamento' => route('agendamento.create', [], false),
+            'storage_logs' => storage_path('logs'),
+            'storage_sessions' => storage_path('framework/sessions'),
+        ],
+        'runtime' => [
+            'session_driver' => config('session.driver'),
+            'cache_store' => config('cache.default'),
+            'queue_connection' => config('queue.default'),
+            'storage_framework_writable' => is_dir(storage_path('framework')) && is_writable(storage_path('framework')),
+            'storage_sessions_writable' => is_dir(storage_path('framework/sessions')) && is_writable(storage_path('framework/sessions')),
+            'bootstrap_cache_writable' => is_dir(base_path('bootstrap/cache')) && is_writable(base_path('bootstrap/cache')),
+        ],
+        'database' => $databaseStatus,
+        'logging' => $loggingStatus,
+        'schema' => $schemaStatus,
+        'schema_check_error' => $schemaCheckError,
+        'missing_items' => $missingItems,
+    ]);
+})->name('diagnostico.hospedagem');
 
 // Rotas protegidas
 Route::middleware('auth')->group(function () {

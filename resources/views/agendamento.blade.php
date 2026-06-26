@@ -175,6 +175,10 @@
                 <div class="alert alert-success">{{ session('success') }}</div>
             @endif
 
+            @if(isset($setupError))
+                <div class="alert alert-warning">{{ $setupError }}</div>
+            @endif
+
             @if($errors->any())
                 <div class="alert alert-danger">
                     <ul class="mb-0">
@@ -207,7 +211,7 @@
                         <label for="horario" class="form-label">Escolha o horário</label>
                         <input type="text" class="form-control" id="horario" name="horario" inputmode="numeric" placeholder="00:00" maxlength="5" pattern="^([01]?[0-9]|2[0-3]):[0-5][0-9]$" value="{{ old('horario') }}" required>
                     </div>
-                    <button type="button" class="btn btn-dark w-100" id="next-to-service">Próximo</button>
+                    <button type="button" class="btn btn-dark w-100" id="next-to-service" {{ isset($setupError) ? 'disabled' : '' }}>Próximo</button>
                 </div>
 
                 <div class="wizard-step" data-step="2">
@@ -227,7 +231,7 @@
                     </div>
                     <div class="wizard-actions">
                         <button type="button" class="btn btn-outline-secondary w-50" id="back-to-time">Voltar</button>
-                        <button type="button" class="btn btn-dark w-50" id="next-to-professional">Próximo</button>
+                        <button type="button" class="btn btn-dark w-50" id="next-to-professional" {{ isset($setupError) ? 'disabled' : '' }}>Próximo</button>
                     </div>
                 </div>
 
@@ -254,7 +258,7 @@
                     </div>
                     <div class="wizard-actions">
                         <button type="button" class="btn btn-outline-secondary w-50" id="back-to-service">Voltar</button>
-                        <button type="button" class="btn btn-dark w-50" id="review-agendamento">Revisar</button>
+                        <button type="button" class="btn btn-dark w-50" id="review-agendamento" {{ isset($setupError) ? 'disabled' : '' }}>Revisar</button>
                     </div>
                 </div>
 
@@ -284,7 +288,7 @@
                     <p class="mb-3 text-center">Confira os dados e confirme para finalizar o agendamento.</p>
                     <div class="wizard-actions">
                         <button type="button" class="btn btn-outline-secondary w-50" id="back-to-professional">Voltar</button>
-                        <button type="submit" class="btn btn-dark w-50" {{ $servicos->isEmpty() || $funcionarios->isEmpty() ? 'disabled' : '' }}>Confirmar agendamento</button>
+                        <button type="submit" class="btn btn-dark w-50" {{ $servicos->isEmpty() || $funcionarios->isEmpty() || isset($setupError) ? 'disabled' : '' }}>Confirmar agendamento</button>
                     </div>
                 </div>
             </form>
@@ -312,6 +316,7 @@
         const slotsLoading = document.getElementById('slots-loading');
         const slotsEmpty = document.getElementById('slots-empty');
         const slotGrid = document.getElementById('slot-grid');
+        const agendamentoBloqueado = @json(isset($setupError));
 
         function showStep(stepNumber) {
             steps.forEach((step) => {
@@ -377,6 +382,13 @@
         }
 
         async function loadSlots() {
+            if (agendamentoBloqueado) {
+                slotGrid.innerHTML = '';
+                slotsEmpty.textContent = 'Finalize a configuracao da hospedagem para liberar os horarios.';
+                slotsEmpty.classList.remove('d-none');
+                return;
+            }
+
             if (!dataField.value || !profissionalField.value) {
                 slotsEmpty.textContent = 'Selecione uma profissional para ver os horarios livres.';
                 slotsEmpty.classList.remove('d-none');

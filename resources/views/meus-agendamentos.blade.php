@@ -22,6 +22,9 @@
     <div class="container">
         <div class="card p-4 mx-auto" style="max-width:600px;">
             <h3 class="mb-4 text-center">Meus Agendamentos</h3>
+            @if(isset($setupError))
+                <div class="alert alert-warning">{{ $setupError }}</div>
+            @endif
             @if($agendamentos->isEmpty())
                 <div class="alert alert-info">Você ainda não possui agendamentos.</div>
             @else

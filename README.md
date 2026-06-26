@@ -1,59 +1,84 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Salao Beauty
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Aplicacao Laravel 12 para cadastro de clientes, agendamentos e area da dona do salao.
 
-## About Laravel
+## Ambiente local
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+1. Instale as dependencias:
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+```bash
+composer install
+npm install
+```
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+2. Crie o ambiente e gere a chave:
 
-## Learning Laravel
+```bash
+copy .env.example .env
+php artisan key:generate
+```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+3. Rode as migrations e suba os assets:
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```bash
+php artisan migrate
+npm run build
+```
 
-## Laravel Sponsors
+## Deploy na Hostinger
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+No Hostinger, os sintomas mais comuns de deploy incompleto neste projeto sao:
 
-### Premium Partners
+- tela inicial e login funcionando, mas cadastro/agendamento falhando
+- erro 500 ao abrir ou confirmar agendamento
+- erro 419 ou login inconsistente por cache/configuracao antiga
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+Use estas configuracoes no .env de producao:
 
-## Contributing
+```env
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://seu-dominio.com
+LOG_CHANNEL=errorlog
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=seu_banco
+DB_USERNAME=seu_usuario
+DB_PASSWORD=sua_senha
 
-## Code of Conduct
+SESSION_DRIVER=file
+CACHE_STORE=file
+QUEUE_CONNECTION=sync
+SESSION_SECURE_COOKIE=true
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Depois do upload, execute no terminal SSH da hospedagem ou no terminal do painel:
 
-## Security Vulnerabilities
+```bash
+php artisan optimize:clear
+php artisan migrate --force
+php artisan storage:link
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Checklist de producao
 
-## License
+1. Aponte o dominio para a pasta public do Laravel.
+2. Confirme que vendor existe no servidor. Se nao existir, rode composer install --no-dev --optimize-autoloader.
+3. Rode php artisan migrate --force sempre que publicar alteracoes de banco.
+4. Se aparecer a mensagem de sistema de agendamento nao finalizado, faltou migration ou o cache de configuracao/rota esta antigo.
+5. Se o navegador retornar 419, revise APP_URL, SESSION_SECURE_COOKIE e limpe cache com php artisan optimize:clear.
+6. Se nao surgir storage/logs/laravel.log no servidor, use LOG_CHANNEL=errorlog, rode php artisan optimize:clear e abra /diagnostico-hospedagem para verificar banco, schema e permissao de escrita.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## Diagnostico rapido
+
+Abra /diagnostico-hospedagem no navegador apos o deploy.
+
+- Se retornar 404, o codigo novo nao foi publicado ou o route cache antigo ainda esta ativo.
+- Se database.connected vier false, o banco da Hostinger nao esta acessivel com o .env atual.
+- Se missing_items vier preenchido, as migrations nao terminaram em producao.
+- Se storage_logs_writable ou storage_sessions_writable vier false, falta permissao de escrita em storage.

@@ -7,11 +7,23 @@ use App\Models\Funcionario;
 use App\Models\Servico;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class AgendamentoController extends Controller
 {
     public function create()
     {
+        $setupError = $this->agendamentoSetupError();
+
+        if ($setupError) {
+            return view('agendamento', [
+                'servicos' => collect(),
+                'funcionarios' => collect(),
+                'setupError' => $setupError,
+            ]);
+        }
+
         $servicos = Servico::orderBy('nome')->get();
         $funcionarios = Funcionario::orderBy('nome')->get();
 
@@ -20,6 +32,14 @@ class AgendamentoController extends Controller
 
     public function store(Request $request)
     {
+        $setupError = $this->agendamentoSetupError();
+
+        if ($setupError) {
+            return back()
+                ->withInput()
+                ->withErrors(['agendamento' => $setupError]);
+        }
+
         $validated = $request->validate([
             'data' => ['required', 'date', 'after_or_equal:today'],
             'horario' => ['required', 'date_format:H:i'],
@@ -58,6 +78,15 @@ class AgendamentoController extends Controller
 
     public function meusAgendamentos()
     {
+        $setupError = $this->agendamentoSetupError();
+
+        if ($setupError) {
+            return view('meus-agendamentos', [
+                'agendamentos' => collect(),
+                'setupError' => $setupError,
+            ]);
+        }
+
         $agendamentos = Agendamento::with(['servicoModel', 'funcionario'])
             ->where('user_id', auth()->id())
             ->orderBy('data', 'desc')
@@ -69,6 +98,16 @@ class AgendamentoController extends Controller
 
     public function horariosDisponiveis(Request $request)
     {
+        $setupError = $this->agendamentoSetupError();
+
+        if ($setupError) {
+            return response()->json([
+                'message' => $setupError,
+                'disponiveis' => [],
+                'ocupados' => [],
+            ], 503);
+        }
+
         $validated = $request->validate([
             'data' => ['required', 'date', 'after_or_equal:today'],
             'funcionario_id' => ['required', 'exists:funcionarios,id'],
@@ -117,5 +156,48 @@ class AgendamentoController extends Controller
         }
 
         return $slots;
+    }
+
+    private function agendamentoSetupError(): ?string
+    {
+        $requiredSchema = [
+            'servicos' => ['nome', 'valor'],
+            'funcionarios' => ['nome'],
+            'agendamentos' => ['user_id', 'data', 'horario', 'servico', 'profissional', 'servico_id', 'funcionario_id'],
+        ];
+
+        $missing = [];
+
+        try {
+            foreach ($requiredSchema as $table => $columns) {
+                if (! Schema::hasTable($table)) {
+                    $missing[] = "tabela {$table}";
+                    continue;
+                }
+
+                foreach ($columns as $column) {
+                    if (! Schema::hasColumn($table, $column)) {
+                        $missing[] = "coluna {$table}.{$column}";
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Fluxo de agendamento indisponivel por falha de banco.', [
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
+
+            return 'O sistema de agendamento nao conseguiu acessar o banco de dados nesta hospedagem. Revise o .env de producao e limpe o cache do Laravel.';
+        }
+
+        if ($missing === []) {
+            return null;
+        }
+
+        Log::warning('Fluxo de agendamento indisponivel por schema incompleto.', [
+            'missing' => $missing,
+        ]);
+
+        return 'O sistema de agendamento ainda nao foi finalizado nesta hospedagem. Execute as migrations em producao e limpe o cache do Laravel.';
     }
 }
