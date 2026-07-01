@@ -1,6 +1,6 @@
 # Salao Beauty
 
-Aplicacao Laravel 12 para cadastro de clientes, agendamentos e area da dona do salao.
+Aplicacao Laravel 12 para cadastro de clientes, agendamentos e Studio Franciele Cesario.
 
 ## Ambiente local
 

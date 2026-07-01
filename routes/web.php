@@ -159,7 +159,7 @@ Route::post('/logout', function (Request $request) {
 Route::get('/diagnostico-hospedagem', function () {
     $requiredSchema = [
         'users' => ['name', 'email', 'password'],
-        'servicos' => ['nome', 'valor'],
+        'servicos' => ['nome', 'valor', 'duracao'],
         'funcionarios' => ['nome'],
         'agendamentos' => ['user_id', 'data', 'horario', 'servico', 'profissional', 'servico_id', 'funcionario_id'],
     ];
@@ -285,6 +285,9 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('can:access-owner-area')->group(function () {
         Route::get('/dona/painel', [OwnerController::class, 'dashboard'])->name('owner.dashboard');
+
+        Route::put('/dona/agendamentos/{agendamento}', [OwnerController::class, 'updateAgendamento'])->name('owner.agendamentos.update');
+        Route::delete('/dona/agendamentos/{agendamento}', [OwnerController::class, 'destroyAgendamento'])->name('owner.agendamentos.destroy');
 
         Route::post('/dona/servicos', [ServicoController::class, 'store'])->name('owner.servicos.store');
         Route::put('/dona/servicos/{servico}', [ServicoController::class, 'update'])->name('owner.servicos.update');

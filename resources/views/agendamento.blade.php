@@ -220,13 +220,13 @@
                         <select class="form-select" id="servico" name="servico_id" required>
                             <option value="">Selecione...</option>
                             @foreach($servicos as $servico)
-                                <option value="{{ $servico->id }}" data-nome="{{ $servico->nome }}" data-valor="{{ number_format($servico->valor, 2, ',', '.') }}" @selected(old('servico_id') == $servico->id)>
-                                    {{ $servico->nome }} - R$ {{ number_format($servico->valor, 2, ',', '.') }}
+                                <option value="{{ $servico->id }}" data-nome="{{ $servico->nome }}" data-valor="{{ number_format($servico->valor, 2, ',', '.') }}" data-duracao="{{ $servico->duracao ? substr($servico->duracao, 0, 5) : '' }}" @selected(old('servico_id') == $servico->id)>
+                                    {{ $servico->nome }} - R$ {{ number_format($servico->valor, 2, ',', '.') }}@if($servico->duracao) - {{ substr($servico->duracao, 0, 5) }}@endif
                                 </option>
                             @endforeach
                         </select>
                         @if($servicos->isEmpty())
-                            <small class="text-danger d-block mt-2">Nenhum serviço cadastrado. Solicite cadastro para a dona do salão.</small>
+                            <small class="text-danger d-block mt-2">Nenhum serviço cadastrado. Solicite cadastro para o Studio Franciele Cesario.</small>
                         @endif
                     </div>
                     <div class="wizard-actions">
@@ -247,7 +247,7 @@
                             @endforeach
                         </select>
                         @if($funcionarios->isEmpty())
-                            <small class="text-danger d-block mt-2">Nenhum profissional cadastrado. Solicite cadastro para a dona do salão.</small>
+                            <small class="text-danger d-block mt-2">Nenhum profissional cadastrado. Solicite cadastro para o Studio Franciele Cesario.</small>
                         @endif
                     </div>
                     <div class="mb-3">
@@ -295,7 +295,7 @@
             <div class="mt-3 d-flex gap-2">
                 <a href="{{ route('agendamento.meus') }}" class="btn btn-outline-secondary w-100">Meus agendamentos</a>
                 @can('access-owner-area')
-                    <a href="{{ route('owner.dashboard') }}" class="btn btn-dark w-100">Area da dona</a>
+                    <a href="{{ route('owner.dashboard') }}" class="btn btn-dark w-100">Studio Franciele Cesario</a>
                 @endcan
             </div>
         </div>
@@ -403,6 +403,7 @@
                 const params = new URLSearchParams({
                     data: dataField.value,
                     funcionario_id: profissionalField.value,
+                    servico_id: servicoField.value,
                 });
 
                 const response = await fetch(`{{ route('agendamento.horarios') }}?${params.toString()}`);
@@ -460,8 +461,9 @@
             const servicoSelecionado = servicoField.options[servicoField.selectedIndex];
             const nomeServico = servicoSelecionado?.dataset.nome || servicoSelecionado.text;
             const valorServico = servicoSelecionado?.dataset.valor ? ` - R$ ${servicoSelecionado.dataset.valor}` : '';
+            const duracaoServico = servicoSelecionado?.dataset.duracao ? ` - ${servicoSelecionado.dataset.duracao}` : '';
 
-            summaryServico.textContent = `${nomeServico}${valorServico}`;
+            summaryServico.textContent = `${nomeServico}${valorServico}${duracaoServico}`;
             summaryProfissional.textContent = profissionalField.options[profissionalField.selectedIndex].text;
             summaryData.textContent = formatDate(dataField.value);
 
@@ -471,6 +473,7 @@
         document.getElementById('back-to-time').addEventListener('click', () => showStep(1));
         document.getElementById('back-to-service').addEventListener('click', () => showStep(2));
         document.getElementById('back-to-professional').addEventListener('click', () => showStep(3));
+        servicoField.addEventListener('change', loadSlots);
         profissionalField.addEventListener('change', loadSlots);
         dataField.addEventListener('change', loadSlots);
     </script>

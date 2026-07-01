@@ -9,6 +9,7 @@ class Servico extends Model
     protected $fillable = [
         'nome',
         'valor',
+        'duracao',
     ];
 
     public function agendamentos()

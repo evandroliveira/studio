@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Agendamento;
 use App\Models\Funcionario;
 use App\Models\Servico;
+use App\Support\AgendamentoHorario;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -47,10 +48,26 @@ class AgendamentoController extends Controller
             'funcionario_id' => ['required', 'exists:funcionarios,id'],
         ]);
 
-        $conflito = Agendamento::where('data', $validated['data'])
-            ->where('horario', $validated['horario'])
+        $servico = Servico::findOrFail($validated['servico_id']);
+        $horarioInicio = AgendamentoHorario::normalizeClockTime($validated['horario']);
+        $duracaoServico = AgendamentoHorario::durationToMinutes($servico->duracao);
+
+        $conflito = Agendamento::with('servicoModel')
+            ->where('data', $validated['data'])
             ->where('funcionario_id', $validated['funcionario_id'])
-            ->exists();
+            ->get()
+            ->contains(function (Agendamento $agendamento) use ($validated, $horarioInicio, $duracaoServico) {
+                $duracaoAgendamento = AgendamentoHorario::durationToMinutes($agendamento->servicoModel?->duracao);
+
+                return AgendamentoHorario::appointmentOverlaps(
+                    $validated['data'],
+                    $horarioInicio,
+                    $duracaoServico,
+                    $agendamento->data,
+                    $agendamento->horario,
+                    $duracaoAgendamento
+                );
+            });
 
         if ($conflito) {
             return back()
@@ -59,8 +76,6 @@ class AgendamentoController extends Controller
                     'horario' => 'Este profissional ja possui um agendamento nesse horario. Escolha outro horario.',
                 ]);
         }
-
-        $servico = Servico::findOrFail($validated['servico_id']);
         $funcionario = Funcionario::findOrFail($validated['funcionario_id']);
 
         Agendamento::create([
@@ -68,7 +83,7 @@ class AgendamentoController extends Controller
             'servico_id' => $servico->id,
             'funcionario_id' => $funcionario->id,
             'data' => $validated['data'],
-            'horario' => $validated['horario'],
+            'horario' => $horarioInicio,
             'servico' => $servico->nome,
             'profissional' => $funcionario->nome,
         ]);
@@ -111,36 +126,51 @@ class AgendamentoController extends Controller
         $validated = $request->validate([
             'data' => ['required', 'date', 'after_or_equal:today'],
             'funcionario_id' => ['required', 'exists:funcionarios,id'],
+            'servico_id' => ['required', 'exists:servicos,id'],
         ]);
 
-        $ocupados = Agendamento::where('data', $validated['data'])
+        $servico = Servico::findOrFail($validated['servico_id']);
+        $duracaoServico = AgendamentoHorario::durationToMinutes($servico->duracao);
+
+        $agendamentosExistentes = Agendamento::with('servicoModel')
+            ->where('data', $validated['data'])
             ->where('funcionario_id', $validated['funcionario_id'])
-            ->pluck('horario')
-            ->map(fn ($hora) => substr((string) $hora, 0, 5))
-            ->values();
+            ->get();
 
         $slots = $this->gerarSlots();
         $agora = Carbon::now();
         $ehHoje = Carbon::parse($validated['data'])->isSameDay($agora);
 
         $disponiveis = collect($slots)
-            ->reject(function ($slot) use ($ocupados, $ehHoje, $agora, $validated) {
-                if ($ocupados->contains($slot)) {
-                    return true;
-                }
-
+            ->reject(function ($slot) use ($agendamentosExistentes, $ehHoje, $agora, $validated, $duracaoServico) {
                 if ($ehHoje) {
                     $dataHoraSlot = Carbon::parse($validated['data'] . ' ' . $slot . ':00');
-                    return $dataHoraSlot->lessThanOrEqualTo($agora);
+
+                    if ($dataHoraSlot->lessThanOrEqualTo($agora)) {
+                        return true;
+                    }
                 }
 
-                return false;
+                $slotInicio = AgendamentoHorario::normalizeClockTime($slot);
+
+                return $agendamentosExistentes->contains(function (Agendamento $agendamento) use ($validated, $slotInicio, $duracaoServico) {
+                    $duracaoAgendamento = AgendamentoHorario::durationToMinutes($agendamento->servicoModel?->duracao);
+
+                    return AgendamentoHorario::appointmentOverlaps(
+                        $validated['data'],
+                        $slotInicio,
+                        $duracaoServico,
+                        $agendamento->data,
+                        $agendamento->horario,
+                        $duracaoAgendamento
+                    );
+                });
             })
             ->values();
 
         return response()->json([
             'disponiveis' => $disponiveis,
-            'ocupados' => $ocupados,
+            'ocupados' => $agendamentosExistentes->pluck('horario')->map(fn ($hora) => substr((string) $hora, 0, 5))->values(),
         ]);
     }
 
@@ -161,7 +191,7 @@ class AgendamentoController extends Controller
     private function agendamentoSetupError(): ?string
     {
         $requiredSchema = [
-            'servicos' => ['nome', 'valor'],
+            'servicos' => ['nome', 'valor', 'duracao'],
             'funcionarios' => ['nome'],
             'agendamentos' => ['user_id', 'data', 'horario', 'servico', 'profissional', 'servico_id', 'funcionario_id'],
         ];
