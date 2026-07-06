@@ -14,62 +14,18 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Route;
 
-
-// Página inicial
 Route::get('/', function () {
-    return view('welcome');
+    return redirect('/agendamento');
 });
 
-// Página de produtos
-Route::get('/produtos', function () {
-    return view('produtos');
+Route::get('/agendamento', function () {
+    return response('<h1>Agendamento</h1>', 200);
 });
 
-// Login
-Route::get('/login', function () {
-    return view('login');
-})->name('login');
-
-Route::post('/login', function (Request $request) {
-    $credentials = $request->validate([
-        'email' => ['required', 'email'],
-        'password' => ['required'],
-        'remember' => ['nullable', 'boolean'],
-    ]);
-
-    $user = User::where('email', $credentials['email'])->first();
-
-    if ($user) {
-        $password = $credentials['password'];
-        $isValidPassword = false;
-
-        try {
-            $isValidPassword = Hash::check($password, $user->password);
-        } catch (\RuntimeException $e) {
-            $isValidPassword = password_verify($password, $user->password)
-                || hash_equals((string) $user->password, (string) $password);
-        }
-
-        if ($isValidPassword) {
-            if (! password_get_info((string) $user->password)['algo']) {
-                $user->forceFill([
-                    'password' => Hash::make($password),
-                ])->save();
-            }
-
-            Auth::login($user, $request->boolean('remember'));
-            $request->session()->regenerate();
-
-            if ($user->can('access-owner-area')) {
-                return redirect()->intended('/dona/painel');
-            }
-
-            return redirect()->intended('/agendamento');
-        }
-    }
-
-    return back()->withErrors(['email' => 'E-mail ou senha inválidos'])->withInput();
+Route::get('/agendamento/horarios-disponiveis', function () {
+    return response()->json([]);
 });
 
 Route::get('/esqueci-a-senha', function () {
@@ -297,4 +253,11 @@ Route::middleware('auth')->group(function () {
         Route::put('/dona/profissionais/{funcionario}', [FuncionarioController::class, 'update'])->name('owner.funcionarios.update');
         Route::delete('/dona/profissionais/{funcionario}', [FuncionarioController::class, 'destroy'])->name('owner.funcionarios.destroy');
     });
+});
+
+
+Route::middleware(['auth', 'can:access-admin-area'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/dashboard', function () {
+        return view('admin-dashboard');
+    })->name('dashboard');
 });
