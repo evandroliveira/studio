@@ -112,6 +112,14 @@
         .slot-btn { border: 1px solid rgba(185, 111, 134, 0.45); background: rgba(255,255,255,0.75); color: #6f3d4f; border-radius: 10px; padding: 6px 8px; font-weight: 600; font-size: 0.85rem; }
         .slot-btn.selected { background: linear-gradient(135deg, #b96f86, #8f4d62); color: #fff; border-color: #8f4d62; }
         .slot-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .suggestion-shell { background: rgba(255, 251, 252, 0.82); border: 1px solid rgba(185, 111, 134, 0.22); border-radius: 14px; padding: 0.9rem; }
+        .suggestion-title { font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(122, 72, 86, 0.74); margin-bottom: 0.3rem; }
+        .suggestion-copy { font-size: 0.9rem; color: #6f3d4f; margin-bottom: 0.75rem; }
+        .suggestion-group + .suggestion-group { margin-top: 0.85rem; }
+        .suggestion-group-label { font-size: 0.82rem; font-weight: 700; color: #3a2330; margin-bottom: 0.45rem; }
+        .suggestion-row { display: flex; flex-wrap: wrap; gap: 8px; }
+        .suggestion-chip { border: 1px solid rgba(143, 77, 98, 0.28); background: rgba(255, 255, 255, 0.92); color: #6f3d4f; border-radius: 999px; padding: 0.45rem 0.8rem; font-size: 0.84rem; font-weight: 700; }
+        .suggestion-chip:hover { background: rgba(185, 111, 134, 0.14); border-color: rgba(143, 77, 98, 0.4); }
 
         @media (max-width: 576px) {
             .agendamento-container { padding: 12px; }
@@ -242,7 +250,7 @@
                             <option value="">Selecione...</option>
                             @foreach($funcionarios as $funcionario)
                                 <option value="{{ $funcionario->id }}" @selected(old('funcionario_id') == $funcionario->id)>
-                                    {{ $funcionario->nome }}
+                                    {{ $funcionario->nome }}@if($funcionario->especialidade) - {{ $funcionario->especialidade }}@endif
                                 </option>
                             @endforeach
                         </select>
@@ -255,6 +263,11 @@
                         <div id="slots-loading" class="small text-muted mb-2 d-none">Carregando horarios...</div>
                         <div id="slots-empty" class="small text-muted mb-2">Selecione uma profissional para ver os horarios livres.</div>
                         <div id="slot-grid" class="slot-grid"></div>
+                        <div id="slot-suggestions" class="suggestion-shell mt-3 d-none">
+                            <div class="suggestion-title">Sugestoes para continuar</div>
+                            <div class="suggestion-copy">Se o horario desejado nao estiver disponivel, escolha um dos proximos encaixes livres.</div>
+                            <div id="slot-suggestions-body"></div>
+                        </div>
                     </div>
                     <div class="wizard-actions">
                         <button type="button" class="btn btn-outline-secondary w-50" id="back-to-service">Voltar</button>
@@ -294,8 +307,8 @@
             </form>
             <div class="mt-3 d-flex gap-2">
                 <a href="{{ route('agendamento.meus') }}" class="btn btn-outline-secondary w-100">Meus agendamentos</a>
-                @can('access-owner-area')
-                    <a href="{{ route('owner.dashboard') }}" class="btn btn-dark w-100">Studio Franciele Cesario</a>
+                @can('access-admin-area')
+                    <a href="{{ route('admin.dashboard') }}" class="btn btn-dark w-100">Painel admin</a>
                 @endcan
             </div>
         </div>
@@ -316,7 +329,12 @@
         const slotsLoading = document.getElementById('slots-loading');
         const slotsEmpty = document.getElementById('slots-empty');
         const slotGrid = document.getElementById('slot-grid');
+        const slotSuggestions = document.getElementById('slot-suggestions');
+        const slotSuggestionsBody = document.getElementById('slot-suggestions-body');
         const agendamentoBloqueado = @json(isset($setupError));
+        const initialSuggestions = @json(session('availabilitySuggestions', ['same_day' => [], 'next_days' => []]));
+        const shouldResumeSlotStep = @json($errors->has('horario') || session()->has('availabilitySuggestions'));
+        let currentAvailableSlots = [];
 
         function showStep(stepNumber) {
             steps.forEach((step) => {
@@ -355,10 +373,15 @@
             return `${parts[2]}/${parts[1]}/${parts[0]}`;
         }
 
+        function hasSuggestions(suggestions) {
+            return Boolean((suggestions?.same_day || []).length || (suggestions?.next_days || []).length);
+        }
+
         function buildSlots(disponiveis) {
+            currentAvailableSlots = Array.isArray(disponiveis) ? disponiveis : [];
             slotGrid.innerHTML = '';
 
-            if (!disponiveis.length) {
+            if (!currentAvailableSlots.length) {
                 slotsEmpty.textContent = 'Nao ha horarios disponiveis para essa data e profissional.';
                 slotsEmpty.classList.remove('d-none');
                 return;
@@ -366,7 +389,7 @@
 
             slotsEmpty.classList.add('d-none');
 
-            disponiveis.forEach((horario) => {
+            currentAvailableSlots.forEach((horario) => {
                 const button = document.createElement('button');
                 button.type = 'button';
                 button.className = `slot-btn ${horarioField.value === horario ? 'selected' : ''}`;
@@ -375,24 +398,91 @@
                     horarioField.value = horario;
                     document.querySelectorAll('.slot-btn').forEach((btn) => btn.classList.remove('selected'));
                     button.classList.add('selected');
+                    renderSuggestions({ same_day: [], next_days: [] });
                 });
 
                 slotGrid.appendChild(button);
             });
         }
 
-        async function loadSlots() {
-            if (agendamentoBloqueado) {
-                slotGrid.innerHTML = '';
-                slotsEmpty.textContent = 'Finalize a configuracao da hospedagem para liberar os horarios.';
-                slotsEmpty.classList.remove('d-none');
+        function createSuggestionButton(data, horario) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'suggestion-chip';
+            button.textContent = `${formatDate(data)} - ${horario}`;
+            button.addEventListener('click', () => {
+                dataField.value = data;
+                horarioField.value = horario;
+                showStep(3);
+                loadSlots();
+            });
+
+            return button;
+        }
+
+        function renderSuggestions(suggestions) {
+            slotSuggestionsBody.innerHTML = '';
+
+            if (!hasSuggestions(suggestions)) {
+                slotSuggestions.classList.add('d-none');
                 return;
             }
 
-            if (!dataField.value || !profissionalField.value) {
-                slotsEmpty.textContent = 'Selecione uma profissional para ver os horarios livres.';
+            slotSuggestions.classList.remove('d-none');
+
+            if ((suggestions.same_day || []).length) {
+                const group = document.createElement('div');
+                group.className = 'suggestion-group';
+
+                const label = document.createElement('div');
+                label.className = 'suggestion-group-label';
+                label.textContent = 'Ainda nessa data';
+                group.appendChild(label);
+
+                const row = document.createElement('div');
+                row.className = 'suggestion-row';
+                suggestions.same_day.forEach((suggestion) => {
+                    row.appendChild(createSuggestionButton(suggestion.data, suggestion.horario));
+                });
+                group.appendChild(row);
+                slotSuggestionsBody.appendChild(group);
+            }
+
+            (suggestions.next_days || []).forEach((daySuggestion) => {
+                const group = document.createElement('div');
+                group.className = 'suggestion-group';
+
+                const label = document.createElement('div');
+                label.className = 'suggestion-group-label';
+                label.textContent = `Proxima data livre: ${formatDate(daySuggestion.data)}`;
+                group.appendChild(label);
+
+                const row = document.createElement('div');
+                row.className = 'suggestion-row';
+                (daySuggestion.horarios || []).forEach((horario) => {
+                    row.appendChild(createSuggestionButton(daySuggestion.data, horario));
+                });
+                group.appendChild(row);
+                slotSuggestionsBody.appendChild(group);
+            });
+        }
+
+        async function loadSlots() {
+            if (agendamentoBloqueado) {
+                currentAvailableSlots = [];
+                slotGrid.innerHTML = '';
+                slotsEmpty.textContent = 'Finalize a configuracao da hospedagem para liberar os horarios.';
+                slotsEmpty.classList.remove('d-none');
+                renderSuggestions({ same_day: [], next_days: [] });
+                return;
+            }
+
+            if (!dataField.value || !profissionalField.value || !servicoField.value) {
+                currentAvailableSlots = [];
+                slotsEmpty.textContent = 'Selecione servico e profissional para ver os horarios livres.';
                 slotsEmpty.classList.remove('d-none');
                 slotGrid.innerHTML = '';
+                renderSuggestions({ same_day: [], next_days: [] });
                 return;
             }
 
@@ -406,6 +496,10 @@
                     servico_id: servicoField.value,
                 });
 
+                if (horarioField.value) {
+                    params.set('horario', horarioField.value);
+                }
+
                 const response = await fetch(`{{ route('agendamento.horarios') }}?${params.toString()}`);
 
                 if (!response.ok) {
@@ -414,10 +508,20 @@
 
                 const payload = await response.json();
                 buildSlots(payload.disponiveis || []);
+
+                if (horarioField.value && !currentAvailableSlots.includes(horarioField.value)) {
+                    renderSuggestions(payload.sugestoes || { same_day: [], next_days: [] });
+                    slotsEmpty.textContent = 'O horario digitado nao esta disponivel. Escolha um encaixe livre abaixo.';
+                    slotsEmpty.classList.remove('d-none');
+                } else {
+                    renderSuggestions({ same_day: [], next_days: [] });
+                }
             } catch (error) {
+                currentAvailableSlots = [];
                 slotGrid.innerHTML = '';
                 slotsEmpty.textContent = 'Nao foi possivel carregar os horarios no momento.';
                 slotsEmpty.classList.remove('d-none');
+                renderSuggestions({ same_day: [], next_days: [] });
             } finally {
                 slotsLoading.classList.add('d-none');
             }
@@ -425,6 +529,12 @@
 
         horarioField.addEventListener('input', () => {
             horarioField.value = formatHorario(horarioField.value);
+        });
+
+        horarioField.addEventListener('change', () => {
+            if (servicoField.value && profissionalField.value) {
+                loadSlots();
+            }
         });
 
         document.getElementById('next-to-service').addEventListener('click', () => {
@@ -457,6 +567,18 @@
                 return;
             }
 
+            if (!currentAvailableSlots.includes(horarioField.value)) {
+                slotsEmpty.textContent = 'Esse horario nao esta disponivel para a profissional escolhida. Use uma das sugestoes abaixo.';
+                slotsEmpty.classList.remove('d-none');
+
+                if (hasSuggestions(initialSuggestions)) {
+                    renderSuggestions(initialSuggestions);
+                }
+
+                loadSlots();
+                return;
+            }
+
             summaryHorario.textContent = horarioField.value;
             const servicoSelecionado = servicoField.options[servicoField.selectedIndex];
             const nomeServico = servicoSelecionado?.dataset.nome || servicoSelecionado.text;
@@ -476,6 +598,12 @@
         servicoField.addEventListener('change', loadSlots);
         profissionalField.addEventListener('change', loadSlots);
         dataField.addEventListener('change', loadSlots);
+
+        if (shouldResumeSlotStep && servicoField.value && profissionalField.value) {
+            showStep(3);
+            renderSuggestions(initialSuggestions);
+            loadSlots();
+        }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

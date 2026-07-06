@@ -55,12 +55,12 @@
                 </table>
             @endif
             <a href="{{ route('agendamento.create') }}" class="btn btn-dark mt-3 w-100">Novo Agendamento</a>
-            @can('access-owner-area')
-                <a href="{{ route('owner.dashboard') }}" class="btn btn-outline-dark mt-2 w-100">Studio Franciele Cesario</a>
+            @can('access-admin-area')
+                <a href="{{ route('admin.dashboard') }}" class="btn btn-outline-dark mt-2 w-100">Painel admin</a>
             @endcan
-            <form method="POST" action="/logout" class="mt-2">
+            <form method="POST" action="{{ route('logout') }}">
                 @csrf
-                <button type="submit" class="btn btn-outline-danger w-100">Sair</button>
+                <button type="submit">Sair</button>
             </form>
         </div>
     </div>

@@ -102,139 +102,6 @@
         .mini-chip {
             display: inline-flex;
             align-items: center;
-            padding: 0.4rem 0.75rem;
-            border-radius: 999px;
-            font-size: 0.84rem;
-            font-weight: 700;
-        }
-
-        .hero-badge {
-            background: rgba(255, 255, 255, 0.12);
-            border: 1px solid rgba(255, 255, 255, 0.14);
-            color: #fff7f3;
-        }
-
-        .mini-chip {
-            background: rgba(100, 116, 101, 0.12);
-            color: #425145;
-        }
-
-        .hero-actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.75rem;
-            justify-content: flex-end;
-        }
-
-        .hero-actions .btn {
-            border-radius: 999px;
-            padding-inline: 1rem;
-            font-weight: 700;
-        }
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Studio Franciele Cesario</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --ink: #211815;
-            --ink-soft: rgba(33, 24, 21, 0.72);
-            --copper: #b66c57;
-            --shadow: 0 24px 55px rgba(22, 15, 14, 0.22);
-        }
-
-        body, html {
-            min-height: 100%;
-            margin: 0;
-            padding: 0;
-            font-family: 'Manrope', sans-serif;
-            color: var(--ink);
-        }
-
-        .video-bg {
-            position: fixed;
-            inset: 0;
-            width: 100vw;
-            height: 100vh;
-            object-fit: cover;
-            z-index: -2;
-        }
-
-        .overlay {
-            position: fixed;
-            inset: 0;
-            background:
-                radial-gradient(circle at top left, rgba(197, 146, 126, 0.48), transparent 38%),
-                linear-gradient(150deg, rgba(17, 12, 11, 0.9), rgba(53, 34, 29, 0.7));
-            z-index: -1;
-        }
-
-        .page-wrap {
-            position: relative;
-            z-index: 1;
-            min-height: 100vh;
-            padding: 28px 12px 40px;
-        }
-
-        .hero-panel,
-        .glass-panel,
-        .stat-card {
-            border-radius: 24px;
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            box-shadow: var(--shadow);
-        }
-
-        .hero-panel {
-            background: linear-gradient(135deg, rgba(30, 22, 20, 0.94), rgba(108, 68, 58, 0.8));
-            padding: 1.6rem;
-            color: #fff7f3;
-        }
-
-        .hero-kicker,
-        .section-kicker,
-        .stat-label {
-            text-transform: uppercase;
-            letter-spacing: 0.14em;
-            font-size: 0.74rem;
-            font-weight: 800;
-        }
-
-        .hero-title,
-        .section-title {
-            font-family: 'Cormorant Garamond', serif;
-            font-weight: 700;
-            letter-spacing: -0.02em;
-        }
-
-        .hero-title {
-            font-size: clamp(2.25rem, 5vw, 4rem);
-            line-height: 0.95;
-            margin: 0.4rem 0 0.9rem;
-        }
-
-        .hero-copy {
-            max-width: 720px;
-            color: rgba(255, 247, 243, 0.82);
-            margin-bottom: 0;
-        }
-
-        .hero-meta {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.65rem;
-            margin-top: 1.3rem;
-        }
-
-        .hero-badge,
-        .mini-chip {
-            display: inline-flex;
-            align-items: center;
             border-radius: 999px;
             font-weight: 700;
         }
@@ -460,6 +327,85 @@
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 0.5rem;
+        }
+
+        .agenda-table tbody tr {
+            transition: background-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .agenda-table tbody tr.agenda-row--pendente > * {
+            background: rgba(243, 230, 199, 0.28);
+        }
+
+        .agenda-table tbody tr.agenda-row--confirmado > * {
+            background: rgba(208, 233, 221, 0.28);
+        }
+
+        .agenda-table tbody tr.agenda-row--cancelado > * {
+            background: rgba(240, 214, 214, 0.3);
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.42rem 0.76rem;
+            border-radius: 999px;
+            font-size: 0.74rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            border: 1px solid transparent;
+        }
+
+        .status-pill--pendente {
+            color: #7b6242;
+            background: rgba(198, 164, 111, 0.18);
+            border-color: rgba(123, 98, 66, 0.16);
+        }
+
+        .status-pill--confirmado {
+            color: #2f7a57;
+            background: rgba(116, 180, 146, 0.18);
+            border-color: rgba(47, 122, 87, 0.16);
+        }
+
+        .status-pill--cancelado {
+            color: #a64d4d;
+            background: rgba(208, 113, 113, 0.18);
+            border-color: rgba(166, 77, 77, 0.16);
+        }
+
+        .status-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: flex-end;
+            margin-bottom: 0.2rem;
+        }
+
+        .btn-confirm-action {
+            background: linear-gradient(135deg, #2f7a57, #1f6041);
+            border: 0;
+            color: #fff;
+        }
+
+        .btn-confirm-action:hover,
+        .btn-confirm-action:focus {
+            background: linear-gradient(135deg, #398b64, #245e43);
+            color: #fff;
+        }
+
+        .btn-cancel-action {
+            border: 1px solid rgba(166, 77, 77, 0.3);
+            background: rgba(255, 255, 255, 0.76);
+            color: #a64d4d;
+        }
+
+        .btn-cancel-action:hover,
+        .btn-cancel-action:focus {
+            background: rgba(166, 77, 77, 0.12);
+            color: #8e3d3d;
         }
 
         .agenda-edit-grid .full {
@@ -696,7 +642,7 @@
                     <p class="section-copy">Cadastre, ajuste ou retire servicos sem sair do painel.</p>
 
                     <div class="form-shell">
-                        <form method="POST" action="{{ route('owner.servicos.store') }}" class="row g-2">
+                        <form method="POST" action="{{ route('admin.servicos.store') }}" class="row g-2">
                             @csrf
                             <div class="col-12 col-md-7 col-xl-12">
                                 <input type="text" class="form-control" name="nome" placeholder="Nome do servico" value="{{ old('nome') }}" required>
@@ -732,7 +678,7 @@
                                         <td>R$ {{ number_format($servico->valor, 2, ',', '.') }}</td>
                                         <td>{{ $servico->duracao ? substr($servico->duracao, 0, 5) : '-' }}</td>
                                         <td class="text-end">
-                                            <form method="POST" action="{{ route('owner.servicos.update', $servico) }}" class="inline-form mb-2 justify-content-end">
+                                            <form method="POST" action="{{ route('admin.servicos.update', $servico) }}" class="inline-form mb-2 justify-content-end">
                                                 @csrf
                                                 @method('PUT')
                                                 <input type="text" class="form-control form-control-sm" name="nome" value="{{ $servico->nome }}" required>
@@ -740,7 +686,7 @@
                                                 <input type="time" class="form-control form-control-sm" name="duracao" step="60" value="{{ $servico->duracao ? substr($servico->duracao, 0, 5) : '' }}">
                                                 <button class="btn btn-sm btn-outline-admin" type="submit">Atualizar</button>
                                             </form>
-                                            <form method="POST" action="{{ route('owner.servicos.destroy', $servico) }}" onsubmit="return confirm('Excluir este servico?')">
+                                            <form method="POST" action="{{ route('admin.servicos.destroy', $servico) }}" onsubmit="return confirm('Excluir este servico?')">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button class="btn btn-sm btn-outline-danger" type="submit">Excluir</button>
@@ -762,13 +708,16 @@
                 <div class="glass-panel h-100">
                     <div class="section-kicker">Gestao da equipe</div>
                     <div class="section-title">Profissionais</div>
-                    <p class="section-copy">Mantenha a equipe disponivel para o cliente com os nomes corretos.</p>
+                    <p class="section-copy">Mantenha a equipe disponivel para o cliente com nome e especialidade sempre atualizados.</p>
 
                     <div class="form-shell">
-                        <form method="POST" action="{{ route('owner.funcionarios.store') }}" class="row g-2">
+                        <form method="POST" action="{{ route('admin.funcionarios.store') }}" class="row g-2">
                             @csrf
                             <div class="col-12">
                                 <input type="text" class="form-control" name="nome" placeholder="Nome da profissional" value="{{ old('nome') }}" required>
+                            </div>
+                            <div class="col-12">
+                                <input type="text" class="form-control" name="especialidade" placeholder="Especialidade da profissional" value="{{ old('especialidade') }}" required>
                             </div>
                             <div class="col-12">
                                 <button type="submit" class="btn btn-primary-admin w-100">Salvar profissional</button>
@@ -781,6 +730,7 @@
                             <thead>
                                 <tr>
                                     <th>Profissional</th>
+                                    <th>Especialidade</th>
                                     <th class="text-end">Acao</th>
                                 </tr>
                             </thead>
@@ -788,14 +738,16 @@
                                 @forelse($funcionarios as $funcionario)
                                     <tr>
                                         <td><strong>{{ $funcionario->nome }}</strong></td>
+                                        <td>{{ $funcionario->especialidade ?? 'Nao informada' }}</td>
                                         <td class="text-end">
-                                            <form method="POST" action="{{ route('owner.funcionarios.update', $funcionario) }}" class="inline-form mb-2 justify-content-end">
+                                            <form method="POST" action="{{ route('admin.funcionarios.update', $funcionario) }}" class="inline-form mb-2 justify-content-end">
                                                 @csrf
                                                 @method('PUT')
                                                 <input type="text" class="form-control form-control-sm" name="nome" value="{{ $funcionario->nome }}" required>
+                                                <input type="text" class="form-control form-control-sm" name="especialidade" value="{{ $funcionario->especialidade }}" required>
                                                 <button class="btn btn-sm btn-outline-admin" type="submit">Atualizar</button>
                                             </form>
-                                            <form method="POST" action="{{ route('owner.funcionarios.destroy', $funcionario) }}" onsubmit="return confirm('Excluir este profissional?')">
+                                            <form method="POST" action="{{ route('admin.funcionarios.destroy', $funcionario) }}" onsubmit="return confirm('Excluir este profissional?')">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button class="btn btn-sm btn-outline-danger" type="submit">Excluir</button>
@@ -804,7 +756,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="2" class="table-note">Nenhuma profissional cadastrada.</td>
+                                        <td colspan="3" class="table-note">Nenhuma profissional cadastrada.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -826,6 +778,7 @@
                                 <div class="upcoming-title">{{ $agendamento->user->name ?? 'Cliente' }}</div>
                                 <div class="muted-copy">{{ $agendamento->servicoModel->nome ?? $agendamento->servico }}</div>
                                 <div class="muted-copy">{{ $agendamento->funcionario->nome ?? $agendamento->profissional ?? 'Profissional nao informada' }}</div>
+                                <div class="muted-copy">{{ $agendamento->funcionario->especialidade ?? 'Especialidade nao informada' }}</div>
                             </div>
                         @empty
                             <div class="upcoming-card">
@@ -851,7 +804,10 @@
                             <div class="col-12 col-xl-6">
                                 <div class="agenda-lane h-100">
                                     <div class="lane-header mb-2">
-                                        <h3 class="lane-title">{{ $profissional }}</h3>
+                                        <div>
+                                            <h3 class="lane-title mb-0">{{ $profissional }}</h3>
+                                            <div class="lane-count">{{ $itens->first()?->funcionario?->especialidade ?? 'Especialidade nao informada' }}</div>
+                                        </div>
                                         <span class="lane-count">{{ $itens->count() }} atendimento(s)</span>
                                     </div>
 
@@ -861,6 +817,7 @@
                                             <div>
                                                 <div class="timeline-client">{{ $agendamento->user->name ?? 'Cliente' }}</div>
                                                 <div class="timeline-meta">{{ $agendamento->servicoModel->nome ?? $agendamento->servico }}</div>
+                                                <div class="timeline-meta">{{ $agendamento->funcionario->especialidade ?? 'Especialidade nao informada' }}</div>
                                                 @if($agendamento->servicoModel)
                                                     <div class="timeline-meta">R$ {{ number_format($agendamento->servicoModel->valor, 2, ',', '.') }}</div>
                                                 @endif
@@ -887,8 +844,16 @@
             <div class="section-title">Agendamentos gerais</div>
             <p class="section-copy">Filtre, remaneje e cancele reservas diretamente da tabela administrativa.</p>
 
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <a href="{{ route('admin.agendamentos.today') }}" class="btn btn-primary-admin">Agenda do dia</a>
+            </div>
+
+            @unless($statusColumnAvailable)
+                <div class="alert alert-warning">Execute as migrations para confirmar ou cancelar horarios sem apagar o historico.</div>
+            @endunless
+
             <div class="filters-shell mb-3">
-                <form method="GET" action="{{ route('owner.dashboard') }}" class="row g-2">
+                <form method="GET" action="{{ route('admin.dashboard') }}" class="row g-2">
                     <div class="col-12 col-md-4">
                         <label class="form-label">Cliente</label>
                         <input type="text" name="cliente" class="form-control" value="{{ request('cliente') }}" placeholder="Nome da cliente">
@@ -908,7 +873,7 @@
                     </div>
                     <div class="col-12 d-flex flex-wrap gap-2">
                         <button class="btn btn-primary-admin" type="submit">Aplicar filtros</button>
-                        <a href="{{ route('owner.dashboard') }}" class="btn btn-outline-admin">Limpar busca</a>
+                        <a href="{{ route('admin.dashboard') }}" class="btn btn-outline-admin">Limpar busca</a>
                     </div>
                 </form>
             </div>
@@ -927,6 +892,7 @@
                             <th>Cliente</th>
                             <th>Servico</th>
                             <th>Profissional</th>
+                            <th>Status</th>
                             <th class="text-end">Acao</th>
                         </tr>
                     </thead>
@@ -935,8 +901,13 @@
                             @php
                                 $servicoSelecionado = $agendamento->servico_id ?? optional($servicos->firstWhere('nome', $agendamento->servico))->id;
                                 $funcionarioSelecionado = $agendamento->funcionario_id ?? optional($funcionarios->firstWhere('nome', $agendamento->profissional))->id;
+                                $statusAtual = $agendamento->status ?? 'pendente';
                             @endphp
-                            <tr>
+                            <tr @class([
+                                'agenda-row--pendente' => $statusAtual === 'pendente',
+                                'agenda-row--confirmado' => $statusAtual === 'confirmado',
+                                'agenda-row--cancelado' => $statusAtual === 'cancelado',
+                            ])>
                                 <td>{{ \Carbon\Carbon::parse($agendamento->data)->format('d/m/Y') }}</td>
                                 <td><span class="mini-chip">{{ substr($agendamento->horario, 0, 5) }}</span></td>
                                 <td><strong>{{ $agendamento->user->name ?? 'Cliente' }}</strong></td>
@@ -946,10 +917,39 @@
                                         <div class="muted-copy">R$ {{ number_format($agendamento->servicoModel->valor, 2, ',', '.') }}</div>
                                     @endif
                                 </td>
-                                <td>{{ $agendamento->funcionario->nome ?? $agendamento->profissional ?? 'Sem profissional' }}</td>
+                                <td>
+                                    <div>{{ $agendamento->funcionario->nome ?? $agendamento->profissional ?? 'Sem profissional' }}</div>
+                                    <div class="muted-copy">{{ $agendamento->funcionario->especialidade ?? 'Especialidade nao informada' }}</div>
+                                </td>
+                                <td>
+                                    <span @class([
+                                        'status-pill',
+                                        'status-pill--pendente' => $statusAtual === 'pendente',
+                                        'status-pill--confirmado' => $statusAtual === 'confirmado',
+                                        'status-pill--cancelado' => $statusAtual === 'cancelado',
+                                    ])>{{ ucfirst($statusAtual) }}</span>
+                                </td>
                                 <td class="text-end">
                                     <div class="agenda-actions ms-auto">
-                                        <form method="POST" action="{{ route('owner.agendamentos.update', $agendamento) }}" class="agenda-edit-grid">
+                                        @if($statusColumnAvailable)
+                                            <div class="status-actions">
+                                                <form method="POST" action="{{ route('admin.agendamentos.status', $agendamento) }}">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <input type="hidden" name="status" value="confirmado">
+                                                    <button class="btn btn-sm btn-confirm-action" type="submit" @disabled($statusAtual === 'confirmado')>Confirmar horario</button>
+                                                </form>
+
+                                                <form method="POST" action="{{ route('admin.agendamentos.status', $agendamento) }}" onsubmit="return confirm('Cancelar este horario?')">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <input type="hidden" name="status" value="cancelado">
+                                                    <button class="btn btn-sm btn-cancel-action" type="submit" @disabled($statusAtual === 'cancelado')>Cancelar horario</button>
+                                                </form>
+                                            </div>
+                                        @endif
+
+                                        <form method="POST" action="{{ route('admin.agendamentos.update', $agendamento) }}" class="agenda-edit-grid">
                                             @csrf
                                             @method('PUT')
                                             <input type="date" class="form-control form-control-sm" name="data" value="{{ \Carbon\Carbon::parse($agendamento->data)->format('Y-m-d') }}" required>
@@ -972,18 +972,12 @@
                                             </select>
                                             <button class="btn btn-sm btn-primary-admin full" type="submit">Salvar ajuste</button>
                                         </form>
-
-                                        <form method="POST" action="{{ route('owner.agendamentos.destroy', $agendamento) }}" onsubmit="return confirm('Cancelar este agendamento?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button class="btn btn-sm btn-outline-danger w-100" type="submit">Cancelar agendamento</button>
-                                        </form>
                                     </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="table-note">Nenhum agendamento encontrado para esse filtro.</td>
+                                <td colspan="7" class="table-note">Nenhum agendamento encontrado para esse filtro.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -995,9 +989,9 @@
             </div>
         </section>
 
-        <form method="POST" action="/logout" class="mt-3 mt-lg-4">
+        <form method="POST" action="{{ route('logout') }}">
             @csrf
-            <button type="submit" class="btn btn-outline-light">Sair</button>
+            <button type="submit">Sair</button>
         </form>
     </div>
 

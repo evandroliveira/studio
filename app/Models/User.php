@@ -9,9 +9,14 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable;    public const ROLE_ADMIN = 'admin';
+    public const ROLE_CLIENTE = 'cliente';
 
-    protected $fillable = [
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var list<string>
+     */    protected $fillable = [
         'name',
         'email',
         'password',
@@ -32,7 +37,5 @@ class User extends Authenticatable
     }
 
     public function isAdmin(): bool
-    {
-        return $this->role === 'admin';
-    }
+    {        return $this->role === 'admin';        return $this->role === self::ROLE_ADMIN;    }
 }

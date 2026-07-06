@@ -8,6 +8,7 @@ use App\Models\Servico;
 use App\Support\AgendamentoHorario;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class OwnerController extends Controller
 {
@@ -17,11 +18,17 @@ class OwnerController extends Controller
         $now = Carbon::now();
         $startOfMonth = $today->copy()->startOfMonth();
         $endOfMonth = $today->copy()->endOfMonth();
+        $statusColumnAvailable = Schema::hasColumn('agendamentos', 'status');
 
         $servicos = Servico::orderBy('nome')->get();
         $funcionarios = Funcionario::orderBy('nome')->get();
 
         $agendaHoje = Agendamento::with(['user', 'servicoModel', 'funcionario'])
+            ->when($statusColumnAvailable, function ($query) {
+                $query->where(function ($statusQuery) {
+                    $statusQuery->whereNull('status')->orWhere('status', '!=', 'cancelado');
+                });
+            })
             ->whereDate('data', $today->toDateString())
             ->orderBy('horario')
             ->get();
@@ -31,6 +38,11 @@ class OwnerController extends Controller
         });
 
         $proximosAgendamentos = Agendamento::with(['user', 'servicoModel', 'funcionario'])
+            ->when($statusColumnAvailable, function ($query) {
+                $query->where(function ($statusQuery) {
+                    $statusQuery->whereNull('status')->orWhere('status', '!=', 'cancelado');
+                });
+            })
             ->where(function ($query) use ($today, $now) {
                 $query->whereDate('data', '>', $today->toDateString())
                     ->orWhere(function ($sameDayQuery) use ($today, $now) {
@@ -45,6 +57,11 @@ class OwnerController extends Controller
             ->get();
 
         $agendamentosDoMes = Agendamento::with(['user', 'servicoModel', 'funcionario'])
+            ->when($statusColumnAvailable, function ($query) {
+                $query->where(function ($statusQuery) {
+                    $statusQuery->whereNull('status')->orWhere('status', '!=', 'cancelado');
+                });
+            })
             ->whereBetween('data', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
             ->orderBy('data')
             ->orderBy('horario')
@@ -94,8 +111,52 @@ class OwnerController extends Controller
             'agendaHoje',
             'agendaHojePorProfissional',
             'proximosAgendamentos',
-            'dashboardMetrics'
+            'dashboardMetrics',
+            'statusColumnAvailable'
         ));
+    }
+
+    public function todayAgenda()
+    {
+        $today = Carbon::today();
+        $statusColumnAvailable = Schema::hasColumn('agendamentos', 'status');
+
+        $agendaHoje = Agendamento::with(['user', 'servicoModel', 'funcionario'])
+            ->whereDate('data', $today->toDateString())
+            ->orderBy('horario')
+            ->get();
+
+        $agendaHojeResumo = [
+            'total' => $agendaHoje->count(),
+            'pendente' => $agendaHoje->filter(fn (Agendamento $agendamento) => ($agendamento->status ?? 'pendente') === 'pendente')->count(),
+            'confirmado' => $agendaHoje->where('status', 'confirmado')->count(),
+            'cancelado' => $agendaHoje->where('status', 'cancelado')->count(),
+        ];
+
+        return view('admin-agenda-today', compact('agendaHoje', 'agendaHojeResumo', 'today', 'statusColumnAvailable'));
+    }
+
+    public function updateStatus(Request $request, Agendamento $agendamento)
+    {
+        $validated = $request->validate([
+            'status' => ['required', 'in:confirmado,cancelado'],
+        ]);
+
+        if (! Schema::hasColumn('agendamentos', 'status')) {
+            return back()->withErrors([
+                'agendamentos' => 'Atualize o banco de dados executando as migrations para confirmar ou cancelar horarios.',
+            ]);
+        }
+
+        $agendamento->update([
+            'status' => $validated['status'],
+        ]);
+
+        $mensagem = $validated['status'] === 'confirmado'
+            ? 'Horario confirmado com sucesso.'
+            : 'Horario cancelado com sucesso.';
+
+        return back()->with('success', $mensagem);
     }
 
     public function updateAgendamento(Request $request, Agendamento $agendamento)
@@ -135,15 +196,20 @@ class OwnerController extends Controller
             ]);
         }
         $funcionario = Funcionario::findOrFail($validated['funcionario_id']);
-
-        $agendamento->update([
+        $dadosAtualizacao = [
             'servico_id' => $servico->id,
             'funcionario_id' => $funcionario->id,
             'data' => $validated['data'],
             'horario' => $horarioInicio,
             'servico' => $servico->nome,
             'profissional' => $funcionario->nome,
-        ]);
+        ];
+
+        if (Schema::hasColumn('agendamentos', 'status')) {
+            $dadosAtualizacao['status'] = 'pendente';
+        }
+
+        $agendamento->update($dadosAtualizacao);
 
         return back()->with('success', 'Agendamento atualizado com sucesso.');
     }

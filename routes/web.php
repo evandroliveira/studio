@@ -22,10 +22,51 @@ Route::get('/', function () {
 Route::get('/agendamento', function () {
     return response('<h1>Agendamento</h1>', 200);
 });
-
 Route::get('/agendamento/horarios-disponiveis', function () {
-    return response()->json([]);
-});
+    return response()->json([]);// Login
+Route::get('/login', function () {
+    return view('login');
+})->name('login');
+
+Route::post('/login', function (Request $request) {
+    $credentials = $request->validate([
+        'email' => ['required', 'email'],
+        'password' => ['required'],
+        'remember' => ['nullable', 'boolean'],
+    ]);
+
+    $user = User::where('email', $credentials['email'])->first();
+
+    if ($user) {
+        $password = $credentials['password'];
+        $isValidPassword = false;
+
+        try {
+            $isValidPassword = Hash::check($password, $user->password);
+        } catch (\RuntimeException $e) {
+            $isValidPassword = password_verify($password, $user->password)
+                || hash_equals((string) $user->password, (string) $password);
+        }
+
+        if ($isValidPassword) {
+            if (! password_get_info((string) $user->password)['algo']) {
+                $user->forceFill([
+                    'password' => Hash::make($password),
+                ])->save();
+            }
+
+            Auth::login($user, $request->boolean('remember'));
+            $request->session()->regenerate();
+
+            if ($user->can('access-admin-area')) {
+                return redirect()->intended('/admin/painel');
+            }
+
+            return redirect()->intended('/agendamento');
+        }
+    }
+
+    return back()->withErrors(['email' => 'E-mail ou senha inválidos'])->withInput();});
 
 Route::get('/esqueci-a-senha', function () {
     return view('forgot-password');
@@ -95,6 +136,7 @@ Route::post('/cadastro', function (Request $request) {
         'name' => $validated['name'],
         'email' => $validated['email'],
         'password' => Hash::make($validated['password']),
+        'role' => User::ROLE_CLIENTE,
     ]);
 
     Auth::login($user);
@@ -113,7 +155,7 @@ Route::post('/logout', function (Request $request) {
 
 Route::get('/diagnostico-hospedagem', function () {
     $requiredSchema = [
-        'users' => ['name', 'email', 'password'],
+        'users' => ['name', 'email', 'password', 'role'],
         'servicos' => ['nome', 'valor', 'duracao'],
         'funcionarios' => ['nome'],
         'agendamentos' => ['user_id', 'data', 'horario', 'servico', 'profissional', 'servico_id', 'funcionario_id'],
@@ -238,19 +280,23 @@ Route::middleware('auth')->group(function () {
     Route::get('/agendamento/horarios-disponiveis', [AgendamentoController::class, 'horariosDisponiveis'])->name('agendamento.horarios');
     Route::get('/meus-agendamentos', [AgendamentoController::class, 'meusAgendamentos'])->name('agendamento.meus');
 
-    Route::middleware('can:access-owner-area')->group(function () {
-        Route::get('/dona/painel', [OwnerController::class, 'dashboard'])->name('owner.dashboard');
+    Route::middleware('can:access-admin-area')->group(function () {
+        Route::prefix('admin')->name('admin.')->group(function () {
+            Route::get('/painel', [OwnerController::class, 'dashboard'])->name('dashboard');
+            Route::get('/agendamentos/hoje', [OwnerController::class, 'todayAgenda'])->name('agendamentos.today');
+            Route::patch('/agendamentos/{agendamento}/status', [OwnerController::class, 'updateStatus'])->name('agendamentos.status');
+            Route::put('/agendamentos/{agendamento}', [OwnerController::class, 'updateAgendamento'])->name('agendamentos.update');
+            Route::delete('/agendamentos/{agendamento}', [OwnerController::class, 'destroyAgendamento'])->name('agendamentos.destroy');
 
-        Route::put('/dona/agendamentos/{agendamento}', [OwnerController::class, 'updateAgendamento'])->name('owner.agendamentos.update');
-        Route::delete('/dona/agendamentos/{agendamento}', [OwnerController::class, 'destroyAgendamento'])->name('owner.agendamentos.destroy');
+            Route::post('/servicos', [ServicoController::class, 'store'])->name('servicos.store');
+            Route::put('/servicos/{servico}', [ServicoController::class, 'update'])->name('servicos.update');
+            Route::delete('/servicos/{servico}', [ServicoController::class, 'destroy'])->name('servicos.destroy');
 
-        Route::post('/dona/servicos', [ServicoController::class, 'store'])->name('owner.servicos.store');
-        Route::put('/dona/servicos/{servico}', [ServicoController::class, 'update'])->name('owner.servicos.update');
-        Route::delete('/dona/servicos/{servico}', [ServicoController::class, 'destroy'])->name('owner.servicos.destroy');
+            Route::post('/profissionais', [FuncionarioController::class, 'store'])->name('funcionarios.store');
+            Route::put('/profissionais/{funcionario}', [FuncionarioController::class, 'update'])->name('funcionarios.update');
+            Route::delete('/profissionais/{funcionario}', [FuncionarioController::class, 'destroy'])->name('funcionarios.destroy');
+        });
 
-        Route::post('/dona/profissionais', [FuncionarioController::class, 'store'])->name('owner.funcionarios.store');
-        Route::put('/dona/profissionais/{funcionario}', [FuncionarioController::class, 'update'])->name('owner.funcionarios.update');
-        Route::delete('/dona/profissionais/{funcionario}', [FuncionarioController::class, 'destroy'])->name('owner.funcionarios.destroy');
     });
 });
 
