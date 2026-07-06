@@ -989,9 +989,9 @@
             </div>
         </section>
 
-        <form method="POST" action="/logout" class="mt-3 mt-lg-4">
+        <form method="POST" action="{{ route('logout') }}">
             @csrf
-            <button type="submit" class="btn btn-outline-light">Sair</button>
+            <button type="submit">Sair</button>
         </form>
     </div>
 
