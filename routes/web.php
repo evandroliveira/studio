@@ -14,7 +14,6 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return redirect('/agendamento');
