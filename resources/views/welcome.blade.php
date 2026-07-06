@@ -6,6 +6,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Bem-vindo ao Studio Franciele Cesario</title>
 	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+	@include('partials.pwa-head')
 	<style>
 		body, html {
 			height: 100%;
@@ -79,6 +80,7 @@
 		@endauth
 	</div>
 
+	@include('partials.pwa-install')
 	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
