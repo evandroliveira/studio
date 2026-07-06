@@ -61,8 +61,8 @@ Route::post('/login', function (Request $request) {
             Auth::login($user, $request->boolean('remember'));
             $request->session()->regenerate();
 
-            if ($user->can('access-owner-area')) {
-                return redirect()->intended('/dona/painel');
+            if ($user->can('access-admin-area')) {
+                return redirect()->intended('/admin/painel');
             }
 
             return redirect()->intended('/agendamento');
@@ -283,18 +283,22 @@ Route::middleware('auth')->group(function () {
     Route::get('/agendamento/horarios-disponiveis', [AgendamentoController::class, 'horariosDisponiveis'])->name('agendamento.horarios');
     Route::get('/meus-agendamentos', [AgendamentoController::class, 'meusAgendamentos'])->name('agendamento.meus');
 
-    Route::middleware('can:access-owner-area')->group(function () {
-        Route::get('/dona/painel', [OwnerController::class, 'dashboard'])->name('owner.dashboard');
+    Route::middleware('can:access-admin-area')->group(function () {
+        Route::prefix('admin')->name('admin.')->group(function () {
+            Route::get('/painel', [OwnerController::class, 'dashboard'])->name('dashboard');
+            Route::get('/agendamentos/hoje', [OwnerController::class, 'todayAgenda'])->name('agendamentos.today');
+            Route::patch('/agendamentos/{agendamento}/status', [OwnerController::class, 'updateStatus'])->name('agendamentos.status');
+            Route::put('/agendamentos/{agendamento}', [OwnerController::class, 'updateAgendamento'])->name('agendamentos.update');
+            Route::delete('/agendamentos/{agendamento}', [OwnerController::class, 'destroyAgendamento'])->name('agendamentos.destroy');
 
-        Route::put('/dona/agendamentos/{agendamento}', [OwnerController::class, 'updateAgendamento'])->name('owner.agendamentos.update');
-        Route::delete('/dona/agendamentos/{agendamento}', [OwnerController::class, 'destroyAgendamento'])->name('owner.agendamentos.destroy');
+            Route::post('/servicos', [ServicoController::class, 'store'])->name('servicos.store');
+            Route::put('/servicos/{servico}', [ServicoController::class, 'update'])->name('servicos.update');
+            Route::delete('/servicos/{servico}', [ServicoController::class, 'destroy'])->name('servicos.destroy');
 
-        Route::post('/dona/servicos', [ServicoController::class, 'store'])->name('owner.servicos.store');
-        Route::put('/dona/servicos/{servico}', [ServicoController::class, 'update'])->name('owner.servicos.update');
-        Route::delete('/dona/servicos/{servico}', [ServicoController::class, 'destroy'])->name('owner.servicos.destroy');
+            Route::post('/profissionais', [FuncionarioController::class, 'store'])->name('funcionarios.store');
+            Route::put('/profissionais/{funcionario}', [FuncionarioController::class, 'update'])->name('funcionarios.update');
+            Route::delete('/profissionais/{funcionario}', [FuncionarioController::class, 'destroy'])->name('funcionarios.destroy');
+        });
 
-        Route::post('/dona/profissionais', [FuncionarioController::class, 'store'])->name('owner.funcionarios.store');
-        Route::put('/dona/profissionais/{funcionario}', [FuncionarioController::class, 'update'])->name('owner.funcionarios.update');
-        Route::delete('/dona/profissionais/{funcionario}', [FuncionarioController::class, 'destroy'])->name('owner.funcionarios.destroy');
     });
 });

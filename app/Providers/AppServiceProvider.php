@@ -26,8 +26,11 @@ class AppServiceProvider extends ServiceProvider
             URL::forceScheme('https');
         }
 
-        Gate::define('access-owner-area', function (User $user) {
+        $canAccessAdminArea = function (User $user) {
             return $user->email === env('OWNER_EMAIL', 'admin@studio.com');
-        });
+        };
+
+        Gate::define('access-admin-area', $canAccessAdminArea);
+        Gate::define('access-owner-area', $canAccessAdminArea);
     }
 }

@@ -12,6 +12,7 @@ class FuncionarioController extends Controller
     {
         $validated = $request->validate([
             'nome' => ['required', 'string', 'max:255', 'unique:funcionarios,nome'],
+            'especialidade' => ['required', 'string', 'max:255'],
         ]);
 
         Funcionario::create($validated);
@@ -23,6 +24,7 @@ class FuncionarioController extends Controller
     {
         $validated = $request->validate([
             'nome' => ['required', 'string', 'max:255', 'unique:funcionarios,nome,' . $funcionario->id],
+            'especialidade' => ['required', 'string', 'max:255'],
         ]);
 
         $funcionario->update($validated);

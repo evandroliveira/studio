@@ -8,6 +8,7 @@ class Funcionario extends Model
 {
     protected $fillable = [
         'nome',
+        'especialidade',
     ];
 
     public function agendamentos()

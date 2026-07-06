@@ -52,30 +52,29 @@ class AgendamentoController extends Controller
         $horarioInicio = AgendamentoHorario::normalizeClockTime($validated['horario']);
         $duracaoServico = AgendamentoHorario::durationToMinutes($servico->duracao);
 
-        $conflito = Agendamento::with('servicoModel')
-            ->where('data', $validated['data'])
-            ->where('funcionario_id', $validated['funcionario_id'])
-            ->get()
-            ->contains(function (Agendamento $agendamento) use ($validated, $horarioInicio, $duracaoServico) {
-                $duracaoAgendamento = AgendamentoHorario::durationToMinutes($agendamento->servicoModel?->duracao);
+        $disponibilidade = $this->resolveDisponibilidade(
+            $validated['data'],
+            (int) $validated['funcionario_id'],
+            $duracaoServico
+        );
 
-                return AgendamentoHorario::appointmentOverlaps(
-                    $validated['data'],
-                    $horarioInicio,
-                    $duracaoServico,
-                    $agendamento->data,
-                    $agendamento->horario,
-                    $duracaoAgendamento
-                );
-            });
+        $horarioSelecionado = substr($horarioInicio, 0, 5);
 
-        if ($conflito) {
+        if (! in_array($horarioSelecionado, $disponibilidade['disponiveis'], true)) {
             return back()
                 ->withInput()
                 ->withErrors([
-                    'horario' => 'Este profissional ja possui um agendamento nesse horario. Escolha outro horario.',
-                ]);
+                    'horario' => 'Este horario nao esta disponivel para essa profissional. Escolha um dos proximos horarios sugeridos.',
+                ])
+                ->with('availabilitySuggestions', $this->buildAvailabilitySuggestions(
+                    $validated['data'],
+                    (int) $validated['funcionario_id'],
+                    $duracaoServico,
+                    $horarioSelecionado,
+                    $disponibilidade['disponiveis']
+                ));
         }
+
         $funcionario = Funcionario::findOrFail($validated['funcionario_id']);
 
         Agendamento::create([
@@ -120,6 +119,10 @@ class AgendamentoController extends Controller
                 'message' => $setupError,
                 'disponiveis' => [],
                 'ocupados' => [],
+                'sugestoes' => [
+                    'same_day' => [],
+                    'next_days' => [],
+                ],
             ], 503);
         }
 
@@ -132,19 +135,54 @@ class AgendamentoController extends Controller
         $servico = Servico::findOrFail($validated['servico_id']);
         $duracaoServico = AgendamentoHorario::durationToMinutes($servico->duracao);
 
+        $disponibilidade = $this->resolveDisponibilidade(
+            $validated['data'],
+            (int) $validated['funcionario_id'],
+            $duracaoServico
+        );
+
+        $horarioSelecionado = trim($request->string('horario')->toString());
+        $horarioSelecionado = $horarioSelecionado !== ''
+            ? substr(AgendamentoHorario::normalizeClockTime($horarioSelecionado), 0, 5)
+            : null;
+
+        $sugestoes = [
+            'same_day' => [],
+            'next_days' => [],
+        ];
+
+        if ($horarioSelecionado !== null && ! in_array($horarioSelecionado, $disponibilidade['disponiveis'], true)) {
+            $sugestoes = $this->buildAvailabilitySuggestions(
+                $validated['data'],
+                (int) $validated['funcionario_id'],
+                $duracaoServico,
+                $horarioSelecionado,
+                $disponibilidade['disponiveis']
+            );
+        }
+
+        return response()->json([
+            'disponiveis' => $disponibilidade['disponiveis'],
+            'ocupados' => $disponibilidade['ocupados'],
+            'sugestoes' => $sugestoes,
+        ]);
+    }
+
+    private function resolveDisponibilidade(string $data, int $funcionarioId, int $duracaoServico): array
+    {
         $agendamentosExistentes = Agendamento::with('servicoModel')
-            ->where('data', $validated['data'])
-            ->where('funcionario_id', $validated['funcionario_id'])
+            ->where('data', $data)
+            ->where('funcionario_id', $funcionarioId)
             ->get();
 
         $slots = $this->gerarSlots();
         $agora = Carbon::now();
-        $ehHoje = Carbon::parse($validated['data'])->isSameDay($agora);
+        $ehHoje = Carbon::parse($data)->isSameDay($agora);
 
         $disponiveis = collect($slots)
-            ->reject(function ($slot) use ($agendamentosExistentes, $ehHoje, $agora, $validated, $duracaoServico) {
+            ->reject(function ($slot) use ($agendamentosExistentes, $ehHoje, $agora, $data, $duracaoServico) {
                 if ($ehHoje) {
-                    $dataHoraSlot = Carbon::parse($validated['data'] . ' ' . $slot . ':00');
+                    $dataHoraSlot = Carbon::parse($data . ' ' . $slot . ':00');
 
                     if ($dataHoraSlot->lessThanOrEqualTo($agora)) {
                         return true;
@@ -153,11 +191,11 @@ class AgendamentoController extends Controller
 
                 $slotInicio = AgendamentoHorario::normalizeClockTime($slot);
 
-                return $agendamentosExistentes->contains(function (Agendamento $agendamento) use ($validated, $slotInicio, $duracaoServico) {
+                return $agendamentosExistentes->contains(function (Agendamento $agendamento) use ($data, $slotInicio, $duracaoServico) {
                     $duracaoAgendamento = AgendamentoHorario::durationToMinutes($agendamento->servicoModel?->duracao);
 
                     return AgendamentoHorario::appointmentOverlaps(
-                        $validated['data'],
+                        $data,
                         $slotInicio,
                         $duracaoServico,
                         $agendamento->data,
@@ -166,12 +204,105 @@ class AgendamentoController extends Controller
                     );
                 });
             })
-            ->values();
+            ->values()
+            ->all();
 
-        return response()->json([
+        return [
             'disponiveis' => $disponiveis,
-            'ocupados' => $agendamentosExistentes->pluck('horario')->map(fn ($hora) => substr((string) $hora, 0, 5))->values(),
-        ]);
+            'ocupados' => $agendamentosExistentes
+                ->pluck('horario')
+                ->map(fn ($hora) => substr((string) $hora, 0, 5))
+                ->values()
+                ->all(),
+        ];
+    }
+
+    private function buildAvailabilitySuggestions(
+        string $data,
+        int $funcionarioId,
+        int $duracaoServico,
+        ?string $horarioSelecionado = null,
+        ?array $disponiveisMesmoDia = null
+    ): array {
+        $horarioSelecionado = $horarioSelecionado !== null && $horarioSelecionado !== ''
+            ? substr(AgendamentoHorario::normalizeClockTime($horarioSelecionado), 0, 5)
+            : null;
+
+        $disponiveisMesmoDia ??= $this->resolveDisponibilidade($data, $funcionarioId, $duracaoServico)['disponiveis'];
+
+        $sameDay = collect($this->orderSuggestedSlots($disponiveisMesmoDia, $horarioSelecionado))
+            ->take(3)
+            ->map(fn (string $slot) => [
+                'data' => $data,
+                'horario' => $slot,
+            ])
+            ->values()
+            ->all();
+
+        $nextDays = [];
+
+        for ($offset = 1; $offset <= 7 && count($nextDays) < 3; $offset++) {
+            $proximaData = Carbon::parse($data)->addDays($offset)->toDateString();
+            $disponibilidadeProximoDia = $this->resolveDisponibilidade($proximaData, $funcionarioId, $duracaoServico);
+
+            if ($disponibilidadeProximoDia['disponiveis'] === []) {
+                continue;
+            }
+
+            $nextDays[] = [
+                'data' => $proximaData,
+                'horarios' => array_slice(
+                    $this->orderSuggestedSlots($disponibilidadeProximoDia['disponiveis'], $horarioSelecionado),
+                    0,
+                    3
+                ),
+            ];
+        }
+
+        return [
+            'same_day' => $sameDay,
+            'next_days' => $nextDays,
+        ];
+    }
+
+    private function orderSuggestedSlots(array $slots, ?string $horarioSelecionado): array
+    {
+        $orderedSlots = array_values(array_unique($slots));
+
+        if ($horarioSelecionado === null || $horarioSelecionado === '') {
+            return $orderedSlots;
+        }
+
+        usort($orderedSlots, function (string $left, string $right) use ($horarioSelecionado) {
+            $leftMinutes = $this->clockToMinutes($left);
+            $rightMinutes = $this->clockToMinutes($right);
+            $selectedMinutes = $this->clockToMinutes($horarioSelecionado);
+
+            $leftIsBefore = $leftMinutes < $selectedMinutes ? 1 : 0;
+            $rightIsBefore = $rightMinutes < $selectedMinutes ? 1 : 0;
+
+            if ($leftIsBefore !== $rightIsBefore) {
+                return $leftIsBefore <=> $rightIsBefore;
+            }
+
+            $leftDistance = abs($leftMinutes - $selectedMinutes);
+            $rightDistance = abs($rightMinutes - $selectedMinutes);
+
+            if ($leftDistance !== $rightDistance) {
+                return $leftDistance <=> $rightDistance;
+            }
+
+            return strcmp($left, $right);
+        });
+
+        return $orderedSlots;
+    }
+
+    private function clockToMinutes(string $clock): int
+    {
+        [$hours, $minutes] = array_map('intval', explode(':', substr(AgendamentoHorario::normalizeClockTime($clock), 0, 5)));
+
+        return ($hours * 60) + $minutes;
     }
 
     private function gerarSlots(): array

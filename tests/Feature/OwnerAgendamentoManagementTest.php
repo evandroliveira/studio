@@ -36,15 +36,15 @@ class OwnerAgendamentoManagementTest extends TestCase
         ]);
 
         $response = $this->actingAs($owner)
-            ->from('/dona/painel')
-            ->put(route('owner.agendamentos.update', $agendamento), [
+            ->from('/admin/painel')
+            ->put(route('admin.agendamentos.update', $agendamento), [
                 'data' => now()->addDays(2)->toDateString(),
                 'horario' => '14:30',
                 'servico_id' => $servicoNovo->id,
                 'funcionario_id' => $funcionarioNovo->id,
             ]);
 
-        $response->assertRedirect('/dona/painel');
+        $response->assertRedirect('/admin/painel');
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('agendamentos', [
@@ -90,15 +90,15 @@ class OwnerAgendamentoManagementTest extends TestCase
         ]);
 
         $response = $this->actingAs($owner)
-            ->from('/dona/painel')
-            ->put(route('owner.agendamentos.update', $agendamentoBase), [
+            ->from('/admin/painel')
+            ->put(route('admin.agendamentos.update', $agendamentoBase), [
                 'data' => $data,
                 'horario' => '09:30',
                 'servico_id' => $servico->id,
                 'funcionario_id' => $funcionario->id,
             ]);
 
-        $response->assertRedirect('/dona/painel');
+        $response->assertRedirect('/admin/painel');
         $response->assertSessionHasErrors(['agendamentos']);
 
         $this->assertDatabaseHas('agendamentos', [
@@ -144,7 +144,7 @@ class OwnerAgendamentoManagementTest extends TestCase
         $this->assertNotContains('10:30', $response->json('disponiveis'));
     }
 
-    public function test_owner_can_cancel_agendamento_from_dashboard(): void
+    public function test_owner_can_confirm_agendamento_from_daily_view(): void
     {
         $owner = User::factory()->create([
             'email' => 'admin@studio.com',
@@ -165,14 +165,52 @@ class OwnerAgendamentoManagementTest extends TestCase
         ]);
 
         $response = $this->actingAs($owner)
-            ->from('/dona/painel')
-            ->delete(route('owner.agendamentos.destroy', $agendamento));
+            ->from('/admin/agendamentos/hoje')
+            ->patch(route('admin.agendamentos.status', $agendamento), [
+                'status' => 'confirmado',
+            ]);
 
-        $response->assertRedirect('/dona/painel');
+        $response->assertRedirect('/admin/agendamentos/hoje');
         $response->assertSessionHas('success');
 
-        $this->assertDatabaseMissing('agendamentos', [
+        $this->assertDatabaseHas('agendamentos', [
             'id' => $agendamento->id,
+            'status' => 'confirmado',
+        ]);
+    }
+
+    public function test_owner_can_cancel_agendamento_from_daily_view(): void
+    {
+        $owner = User::factory()->create([
+            'email' => 'admin@studio.com',
+        ]);
+
+        $cliente = User::factory()->create();
+        $servico = Servico::create(['nome' => 'Corte', 'valor' => 80, 'duracao' => '00:45:00']);
+        $funcionario = Funcionario::create(['nome' => 'Franciele']);
+
+        $agendamento = Agendamento::create([
+            'user_id' => $cliente->id,
+            'servico_id' => $servico->id,
+            'funcionario_id' => $funcionario->id,
+            'data' => now()->addDay()->toDateString(),
+            'horario' => '11:00:00',
+            'servico' => $servico->nome,
+            'profissional' => $funcionario->nome,
+        ]);
+
+        $response = $this->actingAs($owner)
+            ->from('/admin/agendamentos/hoje')
+            ->patch(route('admin.agendamentos.status', $agendamento), [
+                'status' => 'cancelado',
+            ]);
+
+        $response->assertRedirect('/admin/agendamentos/hoje');
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('agendamentos', [
+            'id' => $agendamento->id,
+            'status' => 'cancelado',
         ]);
     }
 }
