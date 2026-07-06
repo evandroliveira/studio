@@ -15,6 +15,9 @@ class User extends Authenticatable implements CanResetPasswordContract
     /** @use HasFactory<UserFactory> */
     use CanResetPassword, HasFactory, Notifiable;
 
+    public const ROLE_ADMIN = 'admin';
+    public const ROLE_CLIENTE = 'cliente';
+
     /**
      * The attributes that are mass assignable.
      *
@@ -24,6 +27,7 @@ class User extends Authenticatable implements CanResetPasswordContract
         'name',
         'email',
         'password',
+        'role',
     ];
 
     /**
@@ -47,5 +51,10 @@ class User extends Authenticatable implements CanResetPasswordContract
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === self::ROLE_ADMIN;
     }
 }

@@ -140,6 +140,7 @@ Route::post('/cadastro', function (Request $request) {
         'name' => $validated['name'],
         'email' => $validated['email'],
         'password' => Hash::make($validated['password']),
+        'role' => User::ROLE_CLIENTE,
     ]);
 
     Auth::login($user);
@@ -158,7 +159,7 @@ Route::post('/logout', function (Request $request) {
 
 Route::get('/diagnostico-hospedagem', function () {
     $requiredSchema = [
-        'users' => ['name', 'email', 'password'],
+        'users' => ['name', 'email', 'password', 'role'],
         'servicos' => ['nome', 'valor', 'duracao'],
         'funcionarios' => ['nome'],
         'agendamentos' => ['user_id', 'data', 'horario', 'servico', 'profissional', 'servico_id', 'funcionario_id'],

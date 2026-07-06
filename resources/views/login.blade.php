@@ -41,6 +41,24 @@
             box-shadow: 0 0 0 0.2rem rgba(31, 31, 31, 0.12);
         }
 
+        .password-toggle-group .form-control {
+            border-right: 0;
+        }
+
+        .password-toggle-group .btn {
+            background: rgba(255, 255, 255, 0.72);
+            border-color: rgba(0, 0, 0, 0.12);
+            color: #1f1f1f;
+            font-weight: 600;
+        }
+
+        .password-toggle-group .btn:hover,
+        .password-toggle-group .btn:focus {
+            background: rgba(255, 255, 255, 0.86);
+            color: #1f1f1f;
+            box-shadow: none;
+        }
+
         .card .btn-dark {
             background-color: rgba(31, 31, 31, 0.92);
             border-color: rgba(31, 31, 31, 0.92);
@@ -106,7 +124,10 @@
                 </div>
                 <div class="mb-3">
                     <label for="password" class="form-label">Senha</label>
-                    <input type="password" class="form-control" id="password" name="password" required>
+                    <div class="input-group password-toggle-group">
+                        <input type="password" class="form-control" id="password" name="password" required>
+                        <button type="button" class="btn btn-outline-secondary" data-password-toggle data-target="password">Mostrar</button>
+                    </div>
                 </div>
                 <div class="form-check mb-3">
                     <input class="form-check-input" type="checkbox" value="1" id="remember" name="remember" @checked(old('remember'))>
@@ -121,6 +142,21 @@
             </div>
         </div>
     </div>
+    <script>
+        document.querySelectorAll('[data-password-toggle]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const input = document.getElementById(button.dataset.target);
+
+                if (!input) {
+                    return;
+                }
+
+                const showingPassword = input.type === 'text';
+                input.type = showingPassword ? 'password' : 'text';
+                button.textContent = showingPassword ? 'Mostrar' : 'Ocultar';
+            });
+        });
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

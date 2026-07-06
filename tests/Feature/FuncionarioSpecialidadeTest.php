@@ -13,7 +13,7 @@ class FuncionarioSpecialidadeTest extends TestCase
 
     public function test_admin_can_store_profissional_with_especialidade(): void
     {
-        $owner = User::factory()->create([
+        $owner = User::factory()->admin()->create([
             'email' => 'admin@studio.com',
         ]);
 

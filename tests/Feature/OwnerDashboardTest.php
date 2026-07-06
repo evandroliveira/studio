@@ -15,7 +15,7 @@ class OwnerDashboardTest extends TestCase
 
     public function test_owner_dashboard_displays_summary_and_schedule_data(): void
     {
-        $owner = User::factory()->create([
+        $owner = User::factory()->admin()->create([
             'name' => 'Franciele',
             'email' => 'admin@studio.com',
         ]);
@@ -57,7 +57,7 @@ class OwnerDashboardTest extends TestCase
 
     public function test_owner_daily_schedule_view_displays_today_appointments(): void
     {
-        $owner = User::factory()->create([
+        $owner = User::factory()->admin()->create([
             'name' => 'Franciele',
             'email' => 'admin@studio.com',
         ]);
@@ -100,7 +100,7 @@ class OwnerDashboardTest extends TestCase
 
     public function test_old_dona_dashboard_route_is_not_available_anymore(): void
     {
-        $owner = User::factory()->create([
+        $owner = User::factory()->admin()->create([
             'email' => 'admin@studio.com',
         ]);
 

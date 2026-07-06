@@ -15,7 +15,7 @@ class OwnerAgendamentoManagementTest extends TestCase
 
     public function test_owner_can_update_agendamento_from_dashboard(): void
     {
-        $owner = User::factory()->create([
+        $owner = User::factory()->admin()->create([
             'email' => 'admin@studio.com',
         ]);
 
@@ -60,7 +60,7 @@ class OwnerAgendamentoManagementTest extends TestCase
 
     public function test_owner_cannot_move_agendamento_to_conflicting_slot(): void
     {
-        $owner = User::factory()->create([
+        $owner = User::factory()->admin()->create([
             'email' => 'admin@studio.com',
         ]);
 
@@ -113,7 +113,7 @@ class OwnerAgendamentoManagementTest extends TestCase
 
     public function test_owner_dashboard_horarios_considera_duracao_do_servico(): void
     {
-        $owner = User::factory()->create([
+        $owner = User::factory()->admin()->create([
             'email' => 'admin@studio.com',
         ]);
 
@@ -146,7 +146,7 @@ class OwnerAgendamentoManagementTest extends TestCase
 
     public function test_owner_can_confirm_agendamento_from_daily_view(): void
     {
-        $owner = User::factory()->create([
+        $owner = User::factory()->admin()->create([
             'email' => 'admin@studio.com',
         ]);
 
@@ -181,7 +181,7 @@ class OwnerAgendamentoManagementTest extends TestCase
 
     public function test_owner_can_cancel_agendamento_from_daily_view(): void
     {
-        $owner = User::factory()->create([
+        $owner = User::factory()->admin()->create([
             'email' => 'admin@studio.com',
         ]);
 
