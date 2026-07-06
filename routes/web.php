@@ -23,7 +23,8 @@ Route::get('/agendamento', function () {
     return response('<h1>Agendamento</h1>', 200);
 });
 Route::get('/agendamento/horarios-disponiveis', function () {
-    return response()->json([]);// Login
+    return response()->json([]);
+});// Login
 Route::get('/login', function () {
     return view('login');
 })->name('login');
@@ -306,3 +307,4 @@ Route::middleware(['auth', 'can:access-admin-area'])->prefix('admin')->name('adm
         return view('admin-dashboard');
     })->name('dashboard');
 });
+
