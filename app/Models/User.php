@@ -9,14 +9,17 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;    public const ROLE_ADMIN = 'admin';
+    use HasFactory, Notifiable;
+
+    public const ROLE_ADMIN = 'admin';
     public const ROLE_CLIENTE = 'cliente';
 
     /**
      * The attributes that are mass assignable.
      *
-     * @var list<string>
-     */    protected $fillable = [
+      * @var list<string>
+      */
+     protected $fillable = [
         'name',
         'email',
         'password',
@@ -36,6 +39,16 @@ class User extends Authenticatable
         ];
     }
 
+    public function isOwnerEmail(): bool
+    {
+        $ownerEmail = trim((string) config('auth.owner_email', 'admin@studio.com'));
+
+        return $ownerEmail !== ''
+            && strcasecmp((string) $this->email, $ownerEmail) === 0;
+    }
+
     public function isAdmin(): bool
-    {        return $this->role === 'admin';        return $this->role === self::ROLE_ADMIN;    }
+    {
+        return $this->role === self::ROLE_ADMIN || $this->isOwnerEmail();
+    }
 }

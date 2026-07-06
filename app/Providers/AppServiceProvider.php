@@ -15,9 +15,8 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $canAccessAdminArea = function (User $user) {
-            return $user->role === 'admin';
-        };        $canAccessAdminArea = fn (User $user) => $user->isAdmin();
+        $canAccessAdminArea = fn (User $user) => $user->isAdmin();
+
         Gate::define('access-admin-area', $canAccessAdminArea);
         Gate::define('access-owner-area', $canAccessAdminArea);
     }

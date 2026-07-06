@@ -57,9 +57,9 @@ MAIL_MAILER=smtp
 MAIL_SCHEME=tls
 MAIL_HOST=smtp.hostinger.com
 MAIL_PORT=587
-MAIL_USERNAME=contato@seu-dominio.com
-MAIL_PASSWORD=sua_senha_do_email
-MAIL_FROM_ADDRESS=contato@seu-dominio.com
+MAIL_USERNAME=SMTP_USERNAME_AQUI
+MAIL_PASSWORD=SMTP_PASSWORD_AQUI
+MAIL_FROM_ADDRESS=no-reply@example.invalid
 MAIL_FROM_NAME="Studio Franciele Cesario"
 ```
 

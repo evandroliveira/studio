@@ -56,6 +56,12 @@ Route::post('/login', function (Request $request) {
                 ])->save();
             }
 
+            if ($user->isOwnerEmail() && $user->role !== User::ROLE_ADMIN) {
+                $user->forceFill([
+                    'role' => User::ROLE_ADMIN,
+                ])->save();
+            }
+
             Auth::login($user, $request->boolean('remember'));
             $request->session()->regenerate();
 
@@ -133,15 +139,23 @@ Route::post('/cadastro', function (Request $request) {
         'password' => ['required', 'confirmed', 'min:8'],
     ]);
 
+    $user = new User([
+        'email' => $validated['email'],
+    ]);
+
     $user = User::create([
         'name' => $validated['name'],
         'email' => $validated['email'],
         'password' => Hash::make($validated['password']),
-        'role' => User::ROLE_CLIENTE,
+        'role' => $user->isOwnerEmail() ? User::ROLE_ADMIN : User::ROLE_CLIENTE,
     ]);
 
     Auth::login($user);
     $request->session()->regenerate();
+
+    if ($user->can('access-admin-area')) {
+        return redirect()->route('admin.dashboard');
+    }
 
     return redirect()->route('agendamento.create');
 })->middleware('guest')->name('register.store');

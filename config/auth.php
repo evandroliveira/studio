@@ -20,6 +20,8 @@ return [
         'passwords' => env('AUTH_PASSWORD_BROKER', 'users'),
     ],
 
+    'owner_email' => env('OWNER_EMAIL', 'admin@studio.com'),
+
     /*
     |--------------------------------------------------------------------------
     | Authentication Guards
