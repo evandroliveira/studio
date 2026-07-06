@@ -2,11 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Mail\AgendamentoConfirmadoMail;
 use App\Models\Agendamento;
 use App\Models\Funcionario;
 use App\Models\Servico;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class OwnerAgendamentoManagementTest extends TestCase
@@ -36,7 +38,7 @@ class OwnerAgendamentoManagementTest extends TestCase
         ]);
 
         $response = $this->actingAs($owner)
-            ->from('/admin/painel')
+            ->from('/admin/agendamentos')
             ->put(route('admin.agendamentos.update', $agendamento), [
                 'data' => now()->addDays(2)->toDateString(),
                 'horario' => '14:30',
@@ -44,7 +46,7 @@ class OwnerAgendamentoManagementTest extends TestCase
                 'funcionario_id' => $funcionarioNovo->id,
             ]);
 
-        $response->assertRedirect('/admin/painel');
+        $response->assertRedirect('/admin/agendamentos');
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('agendamentos', [
@@ -90,7 +92,7 @@ class OwnerAgendamentoManagementTest extends TestCase
         ]);
 
         $response = $this->actingAs($owner)
-            ->from('/admin/painel')
+            ->from('/admin/agendamentos')
             ->put(route('admin.agendamentos.update', $agendamentoBase), [
                 'data' => $data,
                 'horario' => '09:30',
@@ -98,7 +100,7 @@ class OwnerAgendamentoManagementTest extends TestCase
                 'funcionario_id' => $funcionario->id,
             ]);
 
-        $response->assertRedirect('/admin/painel');
+        $response->assertRedirect('/admin/agendamentos');
         $response->assertSessionHasErrors(['agendamentos']);
 
         $this->assertDatabaseHas('agendamentos', [
@@ -144,13 +146,17 @@ class OwnerAgendamentoManagementTest extends TestCase
         $this->assertNotContains('10:30', $response->json('disponiveis'));
     }
 
-    public function test_owner_can_confirm_agendamento_from_daily_view(): void
+    public function test_owner_can_confirm_agendamento_from_daily_view_and_send_email(): void
     {
+        Mail::fake();
+
         $owner = User::factory()->admin()->create([
             'email' => 'admin@studio.com',
         ]);
 
-        $cliente = User::factory()->create();
+        $cliente = User::factory()->create([
+            'email' => 'cliente@studio.com',
+        ]);
         $servico = Servico::create(['nome' => 'Corte', 'valor' => 80]);
         $funcionario = Funcionario::create(['nome' => 'Franciele']);
 
@@ -177,10 +183,17 @@ class OwnerAgendamentoManagementTest extends TestCase
             'id' => $agendamento->id,
             'status' => 'confirmado',
         ]);
+
+        Mail::assertSent(AgendamentoConfirmadoMail::class, function (AgendamentoConfirmadoMail $mail) use ($cliente, $agendamento) {
+            return $mail->hasTo($cliente->email)
+                && $mail->agendamento->is($agendamento);
+        });
     }
 
     public function test_owner_can_cancel_agendamento_from_daily_view(): void
     {
+        Mail::fake();
+
         $owner = User::factory()->admin()->create([
             'email' => 'admin@studio.com',
         ]);
@@ -212,5 +225,7 @@ class OwnerAgendamentoManagementTest extends TestCase
             'id' => $agendamento->id,
             'status' => 'cancelado',
         ]);
+
+        Mail::assertNothingSent();
     }
 }

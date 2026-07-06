@@ -1,4 +1,4 @@
-<link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon.png') }}">
 <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
 <meta name="theme-color" content="#1f1f1f">
 <meta name="mobile-web-app-capable" content="yes">

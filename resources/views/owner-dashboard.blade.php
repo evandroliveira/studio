@@ -135,6 +135,59 @@
             font-weight: 700;
         }
 
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 0.9rem;
+        }
+
+        .menu-card {
+            display: block;
+            padding: 1rem 1.05rem;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.58);
+            border: 1px solid rgba(182, 108, 87, 0.14);
+            color: var(--ink);
+            text-decoration: none;
+            transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+        }
+
+        .menu-card:hover,
+        .menu-card:focus {
+            transform: translateY(-2px);
+            border-color: rgba(182, 108, 87, 0.3);
+            background: rgba(255, 255, 255, 0.76);
+            color: var(--ink);
+        }
+
+        .menu-card.is-active {
+            background: linear-gradient(135deg, rgba(182, 108, 87, 0.18), rgba(255, 255, 255, 0.8));
+            border-color: rgba(182, 108, 87, 0.34);
+        }
+
+        .menu-card-title {
+            font-weight: 800;
+            font-size: 1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .menu-card-copy {
+            color: var(--ink-soft);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .menu-card-count {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.3rem 0.65rem;
+            border-radius: 999px;
+            background: rgba(100, 116, 101, 0.12);
+            color: #425145;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
         .stat-card {
             background: linear-gradient(180deg, rgba(255, 247, 240, 0.98), rgba(244, 232, 224, 0.94));
             padding: 1.2rem;
@@ -587,6 +640,10 @@
             <div class="alert alert-success">{{ session('success') }}</div>
         @endif
 
+        @if(session('warning'))
+            <div class="alert alert-warning">{{ session('warning') }}</div>
+        @endif
+
         @if($errors->any())
             <div class="alert alert-danger">
                 <ul class="mb-0">
@@ -635,164 +692,194 @@
             </div>
         </section>
 
-        <section class="row g-3">
-            <div class="col-12 col-xl-4">
-                <div class="glass-panel h-100">
-                    <div class="section-kicker">Gestao de catalogo</div>
-                    <div class="section-title">Servicos e precos</div>
-                    <p class="section-copy">Cadastre, ajuste ou retire servicos sem sair do painel.</p>
+        @php
+            $menuSections = [
+                'agendamentos' => [
+                    'title' => 'Agendamentos',
+                    'copy' => 'Veja clientes marcados, confirme horarios e acompanhe a agenda.',
+                    'count' => $agendamentos->total().' cliente(s)',
+                ],
+                'profissionais' => [
+                    'title' => 'Profissionais',
+                    'copy' => 'Cadastre novas profissionais e atualize especialidades em um so lugar.',
+                    'count' => $dashboardMetrics['funcionarios'].' cadastrada(s)',
+                ],
+                'servicos' => [
+                    'title' => 'Servicos',
+                    'copy' => 'Mantenha o catalogo de servicos e valores sempre ajustado.',
+                    'count' => $dashboardMetrics['servicos'].' ativo(s)',
+                ],
+            ];
+        @endphp
 
-                    <div class="form-shell">
-                        <form method="POST" action="{{ route('admin.servicos.store') }}" class="row g-2">
-                            @csrf
-                            <div class="col-12 col-md-7 col-xl-12">
-                                <input type="text" class="form-control" name="nome" placeholder="Nome do servico" value="{{ old('nome') }}" required>
-                            </div>
-                            <div class="col-12 col-md-5 col-xl-12">
-                                <input type="number" class="form-control" name="valor" min="0" step="0.01" placeholder="Valor" value="{{ old('valor') }}" required>
-                            </div>
-                            <div class="col-12 col-md-5 col-xl-12">
-                                <label class="form-label mb-1" for="duracao-novo-servico">Duracao</label>
-                                <input type="time" class="form-control" id="duracao-novo-servico" name="duracao" step="60" value="{{ old('duracao') }}">
-                                <small class="text-muted d-block mt-1">Informe quanto tempo este servico ocupa na agenda.</small>
-                            </div>
-                            <div class="col-12">
-                                <button type="submit" class="btn btn-primary-admin w-100">Salvar servico</button>
-                            </div>
-                        </form>
-                    </div>
+        <section class="glass-panel mb-3 mb-lg-4">
+            <div class="section-kicker">Menu administrativo</div>
+            <div class="section-title">Escolha o que quer gerenciar</div>
+            <p class="section-copy mb-3">Deixe o painel mais leve abrindo somente a area que precisa usar agora.</p>
 
-                    <div class="table-responsive">
-                        <table class="table table-sm align-middle catalog-table mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Servico</th>
-                                    <th>Valor</th>
-                                    <th>Duracao</th>
-                                    <th class="text-end">Acao</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($servicos as $servico)
-                                    <tr>
-                                        <td><strong>{{ $servico->nome }}</strong></td>
-                                        <td>R$ {{ number_format($servico->valor, 2, ',', '.') }}</td>
-                                        <td>{{ $servico->duracao ? substr($servico->duracao, 0, 5) : '-' }}</td>
-                                        <td class="text-end">
-                                            <form method="POST" action="{{ route('admin.servicos.update', $servico) }}" class="inline-form mb-2 justify-content-end">
-                                                @csrf
-                                                @method('PUT')
-                                                <input type="text" class="form-control form-control-sm" name="nome" value="{{ $servico->nome }}" required>
-                                                <input type="number" class="form-control form-control-sm" name="valor" min="0" step="0.01" value="{{ $servico->valor }}" required>
-                                                <input type="time" class="form-control form-control-sm" name="duracao" step="60" value="{{ $servico->duracao ? substr($servico->duracao, 0, 5) : '' }}">
-                                                <button class="btn btn-sm btn-outline-admin" type="submit">Atualizar</button>
-                                            </form>
-                                            <form method="POST" action="{{ route('admin.servicos.destroy', $servico) }}" onsubmit="return confirm('Excluir este servico?')">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button class="btn btn-sm btn-outline-danger" type="submit">Excluir</button>
-                                            </form>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="4" class="table-note">Nenhum servico cadastrado.</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-12 col-xl-4">
-                <div class="glass-panel h-100">
-                    <div class="section-kicker">Gestao da equipe</div>
-                    <div class="section-title">Profissionais</div>
-                    <p class="section-copy">Mantenha a equipe disponivel para o cliente com nome e especialidade sempre atualizados.</p>
-
-                    <div class="form-shell">
-                        <form method="POST" action="{{ route('admin.funcionarios.store') }}" class="row g-2">
-                            @csrf
-                            <div class="col-12">
-                                <input type="text" class="form-control" name="nome" placeholder="Nome da profissional" value="{{ old('nome') }}" required>
-                            </div>
-                            <div class="col-12">
-                                <input type="text" class="form-control" name="especialidade" placeholder="Especialidade da profissional" value="{{ old('especialidade') }}" required>
-                            </div>
-                            <div class="col-12">
-                                <button type="submit" class="btn btn-primary-admin w-100">Salvar profissional</button>
-                            </div>
-                        </form>
-                    </div>
-
-                    <div class="table-responsive">
-                        <table class="table table-sm align-middle catalog-table mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Profissional</th>
-                                    <th>Especialidade</th>
-                                    <th class="text-end">Acao</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($funcionarios as $funcionario)
-                                    <tr>
-                                        <td><strong>{{ $funcionario->nome }}</strong></td>
-                                        <td>{{ $funcionario->especialidade ?? 'Nao informada' }}</td>
-                                        <td class="text-end">
-                                            <form method="POST" action="{{ route('admin.funcionarios.update', $funcionario) }}" class="inline-form mb-2 justify-content-end">
-                                                @csrf
-                                                @method('PUT')
-                                                <input type="text" class="form-control form-control-sm" name="nome" value="{{ $funcionario->nome }}" required>
-                                                <input type="text" class="form-control form-control-sm" name="especialidade" value="{{ $funcionario->especialidade }}" required>
-                                                <button class="btn btn-sm btn-outline-admin" type="submit">Atualizar</button>
-                                            </form>
-                                            <form method="POST" action="{{ route('admin.funcionarios.destroy', $funcionario) }}" onsubmit="return confirm('Excluir este profissional?')">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button class="btn btn-sm btn-outline-danger" type="submit">Excluir</button>
-                                            </form>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="3" class="table-note">Nenhuma profissional cadastrada.</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-12 col-xl-4">
-                <div class="glass-panel h-100">
-                    <div class="section-kicker">Visao de fluxo</div>
-                    <div class="section-title">Proximos atendimentos</div>
-                    <p class="section-copy">Bata o olho no que vem agora e identifique janelas ociosas antes de abrir outra tela.</p>
-
-                    <div class="upcoming-list">
-                        @forelse($proximosAgendamentos as $agendamento)
-                            <div class="upcoming-card">
-                                <div class="upcoming-date">{{ \Carbon\Carbon::parse($agendamento->data)->format('d/m/Y') }} as {{ substr($agendamento->horario, 0, 5) }}</div>
-                                <div class="upcoming-title">{{ $agendamento->user->name ?? 'Cliente' }}</div>
-                                <div class="muted-copy">{{ $agendamento->servicoModel->nome ?? $agendamento->servico }}</div>
-                                <div class="muted-copy">{{ $agendamento->funcionario->nome ?? $agendamento->profissional ?? 'Profissional nao informada' }}</div>
-                                <div class="muted-copy">{{ $agendamento->funcionario->especialidade ?? 'Especialidade nao informada' }}</div>
-                            </div>
-                        @empty
-                            <div class="upcoming-card">
-                                <div class="upcoming-title">Sem proximos atendimentos</div>
-                                <div class="muted-copy">A agenda futura esta vazia neste momento.</div>
-                            </div>
-                        @endforelse
-                    </div>
-                </div>
+            <div class="menu-grid">
+                @foreach($menuSections as $sectionKey => $section)
+                    <a
+                        href="{{ route('admin.dashboard', ['section' => $sectionKey]) }}"
+                        @class(['menu-card', 'is-active' => $activeSection === $sectionKey])
+                    >
+                        <div class="menu-card-title">{{ $section['title'] }}</div>
+                        <div class="menu-card-copy">{{ $section['copy'] }}</div>
+                        <span class="menu-card-count">{{ $section['count'] }}</span>
+                    </a>
+                @endforeach
             </div>
         </section>
 
-        <section class="glass-panel mt-3 mt-lg-4">
+        @if($activeSection === 'servicos')
+            <section class="glass-panel">
+                <div class="section-kicker">Gestao de catalogo</div>
+                <div class="section-title">Novo servico</div>
+                <p class="section-copy">Cadastre, ajuste ou retire servicos sem abrir outras areas do painel.</p>
+
+                <div class="form-shell mt-3">
+                    <form method="POST" action="{{ route('admin.servicos.store') }}" class="row g-2">
+                        @csrf
+                        <div class="col-12 col-lg-4">
+                            <input type="text" class="form-control" name="nome" placeholder="Nome do servico" value="{{ old('nome') }}" required>
+                        </div>
+                        <div class="col-12 col-lg-3">
+                            <input type="number" class="form-control" name="valor" min="0" step="0.01" placeholder="Valor" value="{{ old('valor') }}" required>
+                        </div>
+                        <div class="col-12 col-lg-3">
+                            <input type="time" class="form-control" id="duracao-novo-servico" name="duracao" step="60" value="{{ old('duracao') }}">
+                        </div>
+                        <div class="col-12 col-lg-2">
+                            <button type="submit" class="btn btn-primary-admin w-100">Salvar servico</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="table-responsive mt-3">
+                    <table class="table table-sm align-middle catalog-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Servico</th>
+                                <th>Valor</th>
+                                <th>Duracao</th>
+                                <th class="text-end">Acao</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($servicos as $servico)
+                                <tr>
+                                    <td><strong>{{ $servico->nome }}</strong></td>
+                                    <td>R$ {{ number_format($servico->valor, 2, ',', '.') }}</td>
+                                    <td>{{ $servico->duracao ? substr($servico->duracao, 0, 5) : '-' }}</td>
+                                    <td class="text-end">
+                                        <form method="POST" action="{{ route('admin.servicos.update', $servico) }}" class="inline-form mb-2 justify-content-end">
+                                            @csrf
+                                            @method('PUT')
+                                            <input type="text" class="form-control form-control-sm" name="nome" value="{{ $servico->nome }}" required>
+                                            <input type="number" class="form-control form-control-sm" name="valor" min="0" step="0.01" value="{{ $servico->valor }}" required>
+                                            <input type="time" class="form-control form-control-sm" name="duracao" step="60" value="{{ $servico->duracao ? substr($servico->duracao, 0, 5) : '' }}">
+                                            <button class="btn btn-sm btn-outline-admin" type="submit">Atualizar</button>
+                                        </form>
+                                        <form method="POST" action="{{ route('admin.servicos.destroy', $servico) }}" onsubmit="return confirm('Excluir este servico?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button class="btn btn-sm btn-outline-danger" type="submit">Excluir</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="4" class="table-note">Nenhum servico cadastrado.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        @elseif($activeSection === 'profissionais')
+            <section class="glass-panel">
+                <div class="section-kicker">Gestao da equipe</div>
+                <div class="section-title">Novo profissional</div>
+                <p class="section-copy">Cadastre nome e especialidade da equipe sem misturar com os demais controles do painel.</p>
+
+                <div class="form-shell mt-3">
+                    <form method="POST" action="{{ route('admin.funcionarios.store') }}" class="row g-2">
+                        @csrf
+                        <div class="col-12 col-lg-5">
+                            <input type="text" class="form-control" name="nome" placeholder="Nome da profissional" value="{{ old('nome') }}" required>
+                        </div>
+                        <div class="col-12 col-lg-5">
+                            <input type="text" class="form-control" name="especialidade" placeholder="Especialidade da profissional" value="{{ old('especialidade') }}" required>
+                        </div>
+                        <div class="col-12 col-lg-2">
+                            <button type="submit" class="btn btn-primary-admin w-100">Salvar profissional</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="table-responsive mt-3">
+                    <table class="table table-sm align-middle catalog-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Profissional</th>
+                                <th>Especialidade</th>
+                                <th class="text-end">Acao</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($funcionarios as $funcionario)
+                                <tr>
+                                    <td><strong>{{ $funcionario->nome }}</strong></td>
+                                    <td>{{ $funcionario->especialidade ?? 'Nao informada' }}</td>
+                                    <td class="text-end">
+                                        <form method="POST" action="{{ route('admin.funcionarios.update', $funcionario) }}" class="inline-form mb-2 justify-content-end">
+                                            @csrf
+                                            @method('PUT')
+                                            <input type="text" class="form-control form-control-sm" name="nome" value="{{ $funcionario->nome }}" required>
+                                            <input type="text" class="form-control form-control-sm" name="especialidade" value="{{ $funcionario->especialidade }}" required>
+                                            <button class="btn btn-sm btn-outline-admin" type="submit">Atualizar</button>
+                                        </form>
+                                        <form method="POST" action="{{ route('admin.funcionarios.destroy', $funcionario) }}" onsubmit="return confirm('Excluir este profissional?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button class="btn btn-sm btn-outline-danger" type="submit">Excluir</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="3" class="table-note">Nenhuma profissional cadastrada.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        @else
+            <section class="glass-panel">
+                <div class="section-kicker">Visao de fluxo</div>
+                <div class="section-title">Proximos atendimentos</div>
+                <p class="section-copy">Bata o olho no que vem agora e identifique janelas ociosas antes de confirmar novas clientes.</p>
+
+                <div class="upcoming-list mt-3">
+                    @forelse($proximosAgendamentos as $agendamento)
+                        <div class="upcoming-card">
+                            <div class="upcoming-date">{{ \Carbon\Carbon::parse($agendamento->data)->format('d/m/Y') }} as {{ substr($agendamento->horario, 0, 5) }}</div>
+                            <div class="upcoming-title">{{ $agendamento->user->name ?? 'Cliente' }}</div>
+                            <div class="muted-copy">{{ $agendamento->servicoModel->nome ?? $agendamento->servico }}</div>
+                            <div class="muted-copy">{{ $agendamento->funcionario->nome ?? $agendamento->profissional ?? 'Profissional nao informada' }}</div>
+                            <div class="muted-copy">{{ $agendamento->funcionario->especialidade ?? 'Especialidade nao informada' }}</div>
+                        </div>
+                    @empty
+                        <div class="upcoming-card">
+                            <div class="upcoming-title">Sem proximos atendimentos</div>
+                            <div class="muted-copy">A agenda futura esta vazia neste momento.</div>
+                        </div>
+                    @endforelse
+                </div>
+            </section>
+
+            <section class="glass-panel mt-3 mt-lg-4">
             <div class="row g-3 align-items-start">
                 <div class="col-12 col-lg-4">
                     <div class="section-kicker">Operacao do dia</div>
@@ -840,10 +927,10 @@
             </div>
         </section>
 
-        <section class="glass-panel mt-3 mt-lg-4">
+            <section class="glass-panel mt-3 mt-lg-4">
             <div class="section-kicker">Consulta administrativa</div>
-            <div class="section-title">Agendamentos gerais</div>
-            <p class="section-copy">Filtre, remaneje e cancele reservas diretamente da tabela administrativa.</p>
+            <div class="section-title">Clientes agendados</div>
+            <p class="section-copy">Filtre, remaneje, confirme ou cancele reservas diretamente da tabela administrativa.</p>
 
             <div class="d-flex flex-wrap gap-2 mb-3">
                 <a href="{{ route('admin.agendamentos.today') }}" class="btn btn-primary-admin">Agenda do dia</a>
@@ -855,6 +942,7 @@
 
             <div class="filters-shell mb-3">
                 <form method="GET" action="{{ route('admin.dashboard') }}" class="row g-2">
+                    <input type="hidden" name="section" value="agendamentos">
                     <div class="col-12 col-md-4">
                         <label class="form-label">Cliente</label>
                         <input type="text" name="cliente" class="form-control" value="{{ request('cliente') }}" placeholder="Nome da cliente">
@@ -874,7 +962,7 @@
                     </div>
                     <div class="col-12 d-flex flex-wrap gap-2">
                         <button class="btn btn-primary-admin" type="submit">Aplicar filtros</button>
-                        <a href="{{ route('admin.dashboard') }}" class="btn btn-outline-admin">Limpar busca</a>
+                        <a href="{{ route('admin.dashboard', ['section' => 'agendamentos']) }}" class="btn btn-outline-admin">Limpar busca</a>
                     </div>
                 </form>
             </div>
@@ -988,7 +1076,8 @@
             <div class="mt-3">
                 {{ $agendamentos->links() }}
             </div>
-        </section>
+            </section>
+        @endif
 
         <form method="POST" action="{{ route('logout') }}">
             @csrf

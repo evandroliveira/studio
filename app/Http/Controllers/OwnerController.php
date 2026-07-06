@@ -2,17 +2,77 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\AgendamentoConfirmadoMail;
 use App\Models\Agendamento;
 use App\Models\Funcionario;
 use App\Models\Servico;
 use App\Support\AgendamentoHorario;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 
 class OwnerController extends Controller
 {
-    public function dashboard(Request $request)
+    public function dashboard()
+    {
+        $data = $this->buildAdminOverviewData();
+
+        return view('admin-dashboard', $data);
+    }
+
+    public function agendamentos(Request $request)
+    {
+        $data = $this->buildAdminOverviewData();
+
+        $agendamentosQuery = Agendamento::with(['user', 'servicoModel', 'funcionario'])
+            ->orderBy('data', 'desc')
+            ->orderBy('horario');
+
+        if ($request->filled('cliente')) {
+            $cliente = trim($request->string('cliente')->toString());
+
+            $agendamentosQuery->whereHas('user', function ($query) use ($cliente) {
+                $query->where('name', 'like', '%'.$cliente.'%');
+            });
+        }
+
+        if ($request->filled('data')) {
+            $agendamentosQuery->where('data', $request->string('data')->toString());
+        }
+
+        if ($request->filled('funcionario_id')) {
+            $agendamentosQuery->where('funcionario_id', $request->integer('funcionario_id'));
+        }
+
+        $agendamentos = $agendamentosQuery->paginate(20)->withQueryString();
+
+        return view('admin-agendamentos', array_merge($data, [
+            'agendamentos' => $agendamentos,
+        ]));
+    }
+
+    public function profissionais()
+    {
+        $data = $this->buildAdminOverviewData();
+
+        return view('admin-profissionais', [
+            'funcionarios' => $data['funcionarios'],
+            'dashboardMetrics' => $data['dashboardMetrics'],
+        ]);
+    }
+
+    public function servicos()
+    {
+        $data = $this->buildAdminOverviewData();
+
+        return view('admin-servicos', [
+            'servicos' => $data['servicos'],
+            'dashboardMetrics' => $data['dashboardMetrics'],
+        ]);
+    }
+
+    private function buildAdminOverviewData(): array
     {
         $today = Carbon::today();
         $now = Carbon::now();
@@ -82,38 +142,43 @@ class OwnerController extends Controller
                 : 0,
         ];
 
-        $agendamentosQuery = Agendamento::with(['user', 'servicoModel', 'funcionario'])
-            ->orderBy('data', 'desc')
-            ->orderBy('horario');
+        $mailStatus = $this->resolveMailStatus();
 
-        if ($request->filled('cliente')) {
-            $cliente = trim($request->string('cliente')->toString());
-
-            $agendamentosQuery->whereHas('user', function ($query) use ($cliente) {
-                $query->where('name', 'like', '%'.$cliente.'%');
-            });
-        }
-
-        if ($request->filled('data')) {
-            $agendamentosQuery->where('data', $request->string('data')->toString());
-        }
-
-        if ($request->filled('funcionario_id')) {
-            $agendamentosQuery->where('funcionario_id', $request->integer('funcionario_id'));
-        }
-
-        $agendamentos = $agendamentosQuery->paginate(20)->withQueryString();
-
-        return view('owner-dashboard', compact(
+        return compact(
             'servicos',
             'funcionarios',
-            'agendamentos',
             'agendaHoje',
             'agendaHojePorProfissional',
             'proximosAgendamentos',
             'dashboardMetrics',
-            'statusColumnAvailable'
-        ));
+            'statusColumnAvailable',
+            'mailStatus'
+        );
+    }
+
+    private function resolveMailStatus(): array
+    {
+        $driver = (string) config('mail.default', 'log');
+        $smtpHost = (string) config('mail.mailers.smtp.host');
+        $smtpPort = (string) config('mail.mailers.smtp.port');
+        $smtpUsername = (string) config('mail.mailers.smtp.username');
+        $fromAddress = (string) config('mail.from.address');
+
+        $ready = in_array($driver, ['smtp', 'failover'], true)
+            && filled($smtpHost)
+            && $smtpHost !== '127.0.0.1'
+            && filled($smtpUsername)
+            && filled($fromAddress)
+            && $fromAddress !== 'hello@example.com';
+
+        return [
+            'driver' => $driver,
+            'smtp_host' => $smtpHost,
+            'smtp_port' => $smtpPort,
+            'from_address' => $fromAddress,
+            'smtp_username' => $smtpUsername,
+            'ready' => $ready,
+        ];
     }
 
     public function todayAgenda()
@@ -148,6 +213,8 @@ class OwnerController extends Controller
             ]);
         }
 
+        $statusAnterior = $agendamento->status ?? 'pendente';
+
         $agendamento->update([
             'status' => $validated['status'],
         ]);
@@ -156,7 +223,29 @@ class OwnerController extends Controller
             ? 'Horario confirmado com sucesso.'
             : 'Horario cancelado com sucesso.';
 
-        return back()->with('success', $mensagem);
+        $warning = null;
+
+        if ($validated['status'] === 'confirmado' && $statusAnterior !== 'confirmado') {
+            $agendamento->refresh()->loadMissing(['user', 'servicoModel', 'funcionario']);
+
+            if ($agendamento->user?->email) {
+                try {
+                    Mail::to($agendamento->user->email)->send(new AgendamentoConfirmadoMail($agendamento));
+                    $mensagem = 'Horario confirmado com sucesso. A cliente recebera um e-mail com os detalhes do agendamento.';
+                } catch (\Throwable $e) {
+                    report($e);
+                    $warning = 'Horario confirmado, mas nao foi possivel enviar o e-mail de confirmacao agora.';
+                }
+            }
+        }
+
+        $response = back()->with('success', $mensagem);
+
+        if ($warning) {
+            $response->with('warning', $warning);
+        }
+
+        return $response;
     }
 
     public function updateAgendamento(Request $request, Agendamento $agendamento)

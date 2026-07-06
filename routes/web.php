@@ -243,6 +243,18 @@ Route::get('/diagnostico-hospedagem', function () {
         $loggingStatus['laravel_log_error'] = class_basename($e);
     }
 
+    $mailStatus = [
+        'default' => config('mail.default'),
+        'from_address' => config('mail.from.address'),
+        'smtp_host' => config('mail.mailers.smtp.host'),
+        'smtp_port' => config('mail.mailers.smtp.port'),
+        'smtp_username_configured' => filled(config('mail.mailers.smtp.username')),
+        'ready' => in_array(config('mail.default'), ['smtp', 'failover'], true)
+            && filled(config('mail.mailers.smtp.username'))
+            && filled(config('mail.from.address'))
+            && config('mail.mailers.smtp.host') !== '127.0.0.1',
+    ];
+
     return response()->json([
         'build' => '2026-06-26-diagnostic-v1',
         'app' => [
@@ -268,6 +280,7 @@ Route::get('/diagnostico-hospedagem', function () {
         ],
         'database' => $databaseStatus,
         'logging' => $loggingStatus,
+        'mail' => $mailStatus,
         'schema' => $schemaStatus,
         'schema_check_error' => $schemaCheckError,
         'missing_items' => $missingItems,
@@ -284,7 +297,10 @@ Route::middleware('auth')->group(function () {
     Route::middleware('can:access-admin-area')->group(function () {
         Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/painel', [OwnerController::class, 'dashboard'])->name('dashboard');
+            Route::get('/agendamentos', [OwnerController::class, 'agendamentos'])->name('agendamentos.index');
             Route::get('/agendamentos/hoje', [OwnerController::class, 'todayAgenda'])->name('agendamentos.today');
+            Route::get('/profissionais', [OwnerController::class, 'profissionais'])->name('funcionarios.index');
+            Route::get('/servicos', [OwnerController::class, 'servicos'])->name('servicos.index');
             Route::patch('/agendamentos/{agendamento}/status', [OwnerController::class, 'updateStatus'])->name('agendamentos.status');
             Route::put('/agendamentos/{agendamento}', [OwnerController::class, 'updateAgendamento'])->name('agendamentos.update');
             Route::delete('/agendamentos/{agendamento}', [OwnerController::class, 'destroyAgendamento'])->name('agendamentos.destroy');
@@ -304,7 +320,7 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', 'can:access-admin-area'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', function () {
-        return view('admin-dashboard');
-    })->name('dashboard');
+        return redirect()->route('admin.dashboard');
+    })->name('dashboard.legacy');
 });
 
