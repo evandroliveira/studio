@@ -19,6 +19,8 @@ Route::get('/', function () {
     return redirect('/agendamento');
 });
 
+Route::view('/teste', 'teste')->name('teste');
+
 Route::get('/agendamento', function () {
     return response('<h1>Agendamento</h1>', 200);
 });
@@ -307,6 +309,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/agendamento', [AgendamentoController::class, 'store'])->name('agendamento.store');
     Route::get('/agendamento/horarios-disponiveis', [AgendamentoController::class, 'horariosDisponiveis'])->name('agendamento.horarios');
     Route::get('/meus-agendamentos', [AgendamentoController::class, 'meusAgendamentos'])->name('agendamento.meus');
+
+    Route::get('/admin/dashboard', [OwnerController::class, 'dashboard'])->name('admin.dashboard');
 
     Route::middleware('can:access-admin-area')->group(function () {
         Route::prefix('admin')->name('admin.')->group(function () {
