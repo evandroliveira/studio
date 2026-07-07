@@ -4,6 +4,8 @@
         <a href="{{ route('admin.agendamentos.index') }}" class="btn {{ ($activePage ?? null) === 'agendamentos' ? 'btn-dark' : 'btn-outline-dark' }}">Clientes agendados</a>
         <a href="{{ route('admin.funcionarios.index') }}" class="btn {{ ($activePage ?? null) === 'profissionais' ? 'btn-dark' : 'btn-outline-dark' }}">Profissionais</a>
         <a href="{{ route('admin.servicos.index') }}" class="btn {{ ($activePage ?? null) === 'servicos' ? 'btn-dark' : 'btn-outline-dark' }}">Servicos</a>
+        <a href="{{ route('admin.servicos.index') }}" class="btn {{ ($activePage ?? null) === 'servicos' ? 'btn-dark' : 'btn-outline-dark' }}">Teste</a>
+
         <a href="{{ route('admin.agendamentos.today') }}" class="btn btn-outline-secondary">Agenda do dia</a>
     </div>
 </div>
