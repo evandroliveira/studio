@@ -1,4 +1,4 @@
-# Salao Beauty
+# Salao da Fran
 
 Aplicacao Laravel 12 para cadastro de clientes, agendamentos e Studio Franciele Cesario.
 

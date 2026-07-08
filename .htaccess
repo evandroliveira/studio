@@ -1,0 +1,20 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Keep the public storage URL working when the docroot is the project root.
+    RewriteRule ^storage/(.*)$ public/storage/$1 [L]
+
+    # Never expose framework internals from the project root.
+    RewriteRule (^|/)\. - [F,L]
+    RewriteRule ^(?:app|bootstrap|config|database|resources|routes|storage|tests|vendor)/(.*)$ - [F,L,NC]
+    RewriteRule ^(?:artisan|composer\.(?:json|lock)|package(?:-lock)?\.json|phpunit\.xml|vite\.config\.js|README\.md)$ - [F,L,NC]
+
+    # Let direct requests inside /public behave normally.
+    RewriteRule ^public/ - [L]
+
+    # When the host points to the project root, serve the public directory instead.
+    RewriteRule ^$ public/ [L]
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
