@@ -340,19 +340,3 @@ Route::middleware(['auth', 'can:access-admin-area'])->prefix('admin')->name('adm
         return redirect()->route('admin.dashboard');
     })->name('dashboard.legacy');
 });
-
-
-Route::redirect("/", "/diagnostico-hospedagem");
-Route::redirect("/agendamento", "/diagnostico-hospedagem");
-
-Route::fallback(function () {
-    return response("Site online", 200);
-});
-
-Route::get('/diagnostico-hospedagem', function () {
-    return response('Site online', 200);
-});
-
-Route::get('/agendamento', function () {
-    return redirect('/diagnostico-hospedagem');
-});
