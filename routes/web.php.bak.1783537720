@@ -348,11 +348,3 @@ Route::redirect("/agendamento", "/diagnostico-hospedagem");
 Route::fallback(function () {
     return response("Site online", 200);
 });
-
-Route::get('/diagnostico-hospedagem', function () {
-    return response('Site online', 200);
-});
-
-Route::get('/agendamento', function () {
-    return redirect('/diagnostico-hospedagem');
-});
