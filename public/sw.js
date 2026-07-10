@@ -1,10 +1,11 @@
-const CACHE_NAME = 'studio-franciele-pwa-v1';
+const CACHE_NAME = 'studio-franciele-pwa-v2';
 const APP_SHELL = [
     './',
     './login',
     './cadastro',
     './esqueci-a-senha',
     './manifest.webmanifest',
+    './apple-touch-icon.png',
     './icons/icon-192.png',
     './icons/icon-512.png',
 ];

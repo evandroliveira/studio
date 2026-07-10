@@ -1,8 +1,14 @@
 (() => {
-    const storageKey = 'studio-pwa-install-state-v1';
+    const storageKey = 'studio-pwa-install-state-v3';
     const banner = document.getElementById('pwa-install-banner');
     const title = document.getElementById('pwa-install-title');
     const copy = document.getElementById('pwa-install-copy');
+    const guide = document.getElementById('pwa-install-guide');
+    const browserBadge = document.getElementById('pwa-install-browser-badge');
+    const appCaption = document.getElementById('pwa-install-app-caption');
+    const stepOne = document.getElementById('pwa-install-step-1');
+    const stepTwo = document.getElementById('pwa-install-step-2');
+    const stepThree = document.getElementById('pwa-install-step-3');
     const actionButton = document.getElementById('pwa-install-action');
     const closeButton = document.getElementById('pwa-install-close');
 
@@ -12,6 +18,7 @@
 
     const userAgent = window.navigator.userAgent.toLowerCase();
     const isIos = /iphone|ipad|ipod/.test(userAgent);
+    const isSafariOnIos = isIos && /safari/.test(userAgent) && !/crios|fxios|edgios|opios/.test(userAgent);
     const isMobile = /android|iphone|ipad|ipod/.test(userAgent);
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 
@@ -46,14 +53,45 @@
     let hasShownBanner = false;
     let fallbackTimer = null;
 
+    const hideGuide = () => {
+        if (!guide) {
+            return;
+        }
+
+        guide.hidden = true;
+    };
+
+    const showGuide = (badgeText, captionText, steps) => {
+        if (!guide || !browserBadge || !stepOne || !stepTwo || !stepThree) {
+            return;
+        }
+
+        browserBadge.textContent = badgeText;
+        if (appCaption) {
+            appCaption.textContent = captionText;
+        }
+        stepOne.textContent = steps[0];
+        stepTwo.textContent = steps[1];
+        stepThree.textContent = steps[2];
+        guide.hidden = false;
+    };
+
+    const setModalMode = (enabled) => {
+        banner.classList.toggle('is-modal', enabled);
+    };
+
     const hideBanner = () => {
         banner.hidden = true;
         banner.classList.remove('is-visible');
+        setModalMode(false);
+        hideGuide();
     };
 
     const showBanner = (mode) => {
         currentMode = mode;
         hasShownBanner = true;
+        hideGuide();
+        setModalMode(mode === 'ios' || mode === 'ios-browser');
 
         if (mode === 'native') {
             title.textContent = 'Instale o app no celular';
@@ -61,8 +99,24 @@
             actionButton.textContent = 'Instalar';
             closeButton.hidden = false;
         } else if (mode === 'ios') {
-            title.textContent = 'Adicione na tela inicial';
-            copy.textContent = 'No iPhone ou iPad, toque em Compartilhar e depois em Adicionar a Tela de Inicio.';
+            title.textContent = 'Instale no iPhone';
+            copy.textContent = 'Use o atalho do Safari para salvar o Studio Franciele como app na tela inicial.';
+            showGuide('Safari no iPhone', 'O iPhone instala este app pela opcao Adicionar a Tela de Inicio.', [
+                'Voce ja esta no Safari do iPhone.',
+                'Toque em Compartilhar no rodape do Safari.',
+                'Escolha Adicionar a Tela de Inicio.',
+                'Confirme em Adicionar para salvar o app no iPhone.'
+            ]);
+            actionButton.textContent = 'Entendi';
+            closeButton.hidden = true;
+        } else if (mode === 'ios-browser') {
+            title.textContent = 'Instalacao no iPhone';
+            copy.textContent = 'No iPhone, a instalacao do app funciona pelo Safari. Se voce estiver em outro navegador, abra esta pagina no Safari.';
+            showGuide('Abra no Safari', 'Abra no Safari para mostrar a opcao de instalar na tela inicial.', [
+                'Abra esta mesma pagina no Safari do iPhone.',
+                'No Safari, toque em Compartilhar.',
+                'Depois toque em Adicionar a Tela de Inicio.'
+            ]);
             actionButton.textContent = 'Entendi';
             closeButton.hidden = true;
         } else {
@@ -113,7 +167,7 @@
             }
 
             if (isIos) {
-                showBanner('ios');
+                showBanner(isSafariOnIos ? 'ios' : 'ios-browser');
                 return;
             }
 
