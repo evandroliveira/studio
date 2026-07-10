@@ -1,3 +1,8 @@
+@php
+    ini_set('display_errors', '1');
+    error_reporting(E_ALL);
+@endphp
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -175,6 +180,7 @@
         <source src="/videos/studio2.mp4" type="video/mp4">
         Seu navegador não suporta vídeo em HTML5.
     </video>
+   
     <div class="overlay"></div>
     <div class="agendamento-container">
         <div class="card p-4" style="width:min(92vw, 480px); max-width: 480px; min-width: 0;">
