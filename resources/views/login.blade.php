@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Login - Studio Franciele Cesario</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     @include('partials.pwa-head')
@@ -68,6 +69,27 @@
         .card .btn-dark:hover {
             background-color: rgba(31, 31, 31, 1);
             border-color: rgba(31, 31, 31, 1);
+        }
+
+        .auth-separator {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: rgba(31, 31, 31, 0.7);
+            font-size: 0.9rem;
+        }
+
+        .auth-separator::before,
+        .auth-separator::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: rgba(31, 31, 31, 0.15);
+        }
+
+        .google-login-wrapper {
+            display: flex;
+            justify-content: center;
         }
 
         .auth-links {
@@ -137,6 +159,29 @@
                 <button type="submit" class="btn btn-dark w-100">Entrar</button>
             </form>
 
+            @if(config('services.google.client_id'))
+                <div class="auth-separator my-3">ou</div>
+                <div id="google-login-feedback" class="alert alert-danger d-none mb-3"></div>
+                <div id="g_id_onload"
+                     data-client_id="{{ config('services.google.client_id') }}"
+                     data-context="signin"
+                     data-ux_mode="popup"
+                     data-callback="handleGoogleCredentialResponse"
+                     data-auto_prompt="false">
+                </div>
+                <div class="google-login-wrapper">
+                    <div class="g_id_signin"
+                         data-type="standard"
+                         data-theme="outline"
+                         data-size="large"
+                         data-text="signin_with"
+                         data-shape="pill"
+                         data-logo_alignment="left"
+                         data-width="320">
+                    </div>
+                </div>
+            @endif
+
             <div class="auth-links mt-3">
                 <a href="{{ route('password.request') }}">Esqueci a senha</a>
                 <a href="{{ route('register') }}">Novo cliente</a>
@@ -157,8 +202,59 @@
                 button.textContent = showingPassword ? 'Mostrar' : 'Ocultar';
             });
         });
+
+        @if(config('services.google.client_id'))
+            const googleFeedback = document.getElementById('google-login-feedback');
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+            const setGoogleFeedback = (message) => {
+                if (!googleFeedback) {
+                    return;
+                }
+
+                googleFeedback.textContent = message;
+                googleFeedback.classList.remove('d-none');
+            };
+
+            window.handleGoogleCredentialResponse = async ({ credential }) => {
+                if (!credential || !csrfToken) {
+                    setGoogleFeedback('Nao foi possivel iniciar o login com Google.');
+                    return;
+                }
+
+                googleFeedback?.classList.add('d-none');
+
+                try {
+                    const response = await fetch('{{ route('login.google') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                        },
+                        body: JSON.stringify({
+                            credential,
+                            remember: document.getElementById('remember')?.checked ?? false,
+                        }),
+                    });
+
+                    const data = await response.json().catch(() => ({}));
+
+                    if (!response.ok) {
+                        throw new Error(data.message || 'Nao foi possivel concluir o login com Google.');
+                    }
+
+                    window.location.href = data.redirect || '{{ route('agendamento.create') }}';
+                } catch (error) {
+                    setGoogleFeedback(error.message || 'Nao foi possivel concluir o login com Google.');
+                }
+            };
+        @endif
     </script>
     @include('partials.pwa-install')
+    @if(config('services.google.client_id'))
+        <script src="https://accounts.google.com/gsi/client" async defer></script>
+    @endif
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

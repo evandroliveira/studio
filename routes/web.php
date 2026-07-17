@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AgendamentoController;
 use App\Http\Controllers\FuncionarioController;
+use App\Http\Controllers\GoogleLoginController;
 use App\Http\Controllers\OwnerController;
 use App\Http\Controllers\ServicoController;
 use App\Models\User;
@@ -75,6 +76,10 @@ Route::post('/login', function (Request $request) {
     }
 
     return back()->withErrors(['email' => 'E-mail ou senha inválidos'])->withInput();});
+
+Route::post('/login/google', [GoogleLoginController::class, 'authenticate'])
+    ->middleware('guest')
+    ->name('login.google');
 
 Route::get('/esqueci-a-senha', function () {
     return view('forgot-password');
