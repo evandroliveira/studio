@@ -142,6 +142,7 @@ Route::post('/cadastro', function (Request $request) {
     $validated = $request->validate([
         'name' => ['required', 'string', 'max:255'],
         'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+        'telefone' => ['required', 'string', 'max:20', 'regex:/^\+?[0-9()\s.-]{10,20}$/'],
         'password' => ['required', 'confirmed', 'min:8'],
     ]);
 
@@ -152,6 +153,7 @@ Route::post('/cadastro', function (Request $request) {
     $user = User::create([
         'name' => $validated['name'],
         'email' => $validated['email'],
+        'telefone' => $validated['telefone'],
         'password' => Hash::make($validated['password']),
         'role' => $user->isOwnerEmail() ? User::ROLE_ADMIN : User::ROLE_CLIENTE,
     ]);

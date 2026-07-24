@@ -8,6 +8,7 @@ use App\Models\Funcionario;
 use App\Models\Servico;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
@@ -146,9 +147,17 @@ class OwnerAgendamentoManagementTest extends TestCase
         $this->assertNotContains('10:30', $response->json('disponiveis'));
     }
 
-    public function test_owner_can_confirm_agendamento_from_daily_view_and_send_email(): void
+    public function test_owner_can_confirm_agendamento_and_send_automatic_whatsapp_notification(): void
     {
         Mail::fake();
+        Http::fake();
+        config([
+            'services.meta_whatsapp.phone_number_id' => '123456789',
+            'services.meta_whatsapp.access_token' => 'test-access-token',
+            'services.meta_whatsapp.api_version' => 'v25.0',
+            'services.meta_whatsapp.template' => 'agendamento_confirmado',
+            'services.meta_whatsapp.template_language' => 'pt_BR',
+        ]);
 
         $owner = User::factory()->admin()->create([
             'email' => 'admin@studio.com',
@@ -156,6 +165,7 @@ class OwnerAgendamentoManagementTest extends TestCase
 
         $cliente = User::factory()->create([
             'email' => 'cliente@studio.com',
+            'telefone' => '(11) 99999-9999',
         ]);
         $servico = Servico::create(['nome' => 'Corte', 'valor' => 80]);
         $funcionario = Funcionario::create(['nome' => 'Franciele']);
@@ -177,7 +187,7 @@ class OwnerAgendamentoManagementTest extends TestCase
             ]);
 
         $response->assertRedirect('/admin/agendamentos/hoje');
-        $response->assertSessionHas('success');
+        $response->assertSessionHas('success', 'Horario confirmado com sucesso. A cliente recebera uma notificacao por e-mail e WhatsApp.');
 
         $this->assertDatabaseHas('agendamentos', [
             'id' => $agendamento->id,
@@ -187,6 +197,16 @@ class OwnerAgendamentoManagementTest extends TestCase
         Mail::assertSent(AgendamentoConfirmadoMail::class, function (AgendamentoConfirmadoMail $mail) use ($cliente, $agendamento) {
             return $mail->hasTo($cliente->email)
                 && $mail->agendamento->is($agendamento);
+        });
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://graph.facebook.com/v25.0/123456789/messages'
+                && data_get($request->data(), 'messaging_product') === 'whatsapp'
+                && data_get($request->data(), 'recipient_type') === 'individual'
+                && data_get($request->data(), 'to') === '+5511999999999'
+                && data_get($request->data(), 'template.name') === 'agendamento_confirmado'
+                && data_get($request->data(), 'template.language.code') === 'pt_BR'
+                && data_get($request->data(), 'template.components.0.parameters.0.text') === $cliente->name;
         });
     }
 

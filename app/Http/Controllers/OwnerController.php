@@ -9,6 +9,7 @@ use App\Models\Servico;
 use App\Support\AgendamentoHorario;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 
@@ -224,6 +225,8 @@ class OwnerController extends Controller
             : 'Horario cancelado com sucesso.';
 
         $warning = null;
+        $emailEnviado = false;
+        $whatsAppEnviado = false;
 
         if ($validated['status'] === 'confirmado' && $statusAnterior !== 'confirmado') {
             $agendamento->refresh()->loadMissing(['user', 'servicoModel', 'funcionario']);
@@ -231,11 +234,35 @@ class OwnerController extends Controller
             if ($agendamento->user?->email) {
                 try {
                     Mail::to($agendamento->user->email)->send(new AgendamentoConfirmadoMail($agendamento));
-                    $mensagem = 'Horario confirmado com sucesso. A cliente recebera um e-mail com os detalhes do agendamento.';
+                    $emailEnviado = true;
                 } catch (\Throwable $e) {
                     report($e);
                     $warning = 'Horario confirmado, mas nao foi possivel enviar o e-mail de confirmacao agora.';
                 }
+            }
+
+            $telefone = $this->whatsAppPhone($agendamento);
+
+            if (! $telefone) {
+                $warning = trim(($warning ? $warning . ' ' : '') . 'Horario confirmado, mas a cliente nao possui WhatsApp cadastrado.');
+            } elseif (! $this->isWhatsAppConfigured()) {
+                $warning = trim(($warning ? $warning . ' ' : '') . 'Horario confirmado, mas a integracao automatica do WhatsApp ainda nao esta configurada.');
+            } else {
+                try {
+                    $this->sendWhatsAppConfirmation($agendamento, $telefone);
+                    $whatsAppEnviado = true;
+                } catch (\Throwable $e) {
+                    report($e);
+                    $warning = trim(($warning ? $warning . ' ' : '') . 'Horario confirmado, mas nao foi possivel enviar a notificacao pelo WhatsApp agora.');
+                }
+            }
+
+            if ($emailEnviado && $whatsAppEnviado) {
+                $mensagem = 'Horario confirmado com sucesso. A cliente recebera uma notificacao por e-mail e WhatsApp.';
+            } elseif ($emailEnviado) {
+                $mensagem = 'Horario confirmado com sucesso. A cliente recebera um e-mail com os detalhes do agendamento.';
+            } elseif ($whatsAppEnviado) {
+                $mensagem = 'Horario confirmado com sucesso. A cliente recebera uma notificacao automatica no WhatsApp.';
             }
         }
 
@@ -246,6 +273,63 @@ class OwnerController extends Controller
         }
 
         return $response;
+    }
+
+    private function whatsAppPhone(Agendamento $agendamento): ?string
+    {
+        $telefone = preg_replace('/\D+/', '', (string) $agendamento->user?->telefone);
+
+        if (in_array(strlen($telefone), [10, 11], true)) {
+            $telefone = '55' . $telefone;
+        }
+
+        if (! str_starts_with($telefone, '55') || ! in_array(strlen($telefone), [12, 13], true)) {
+            return null;
+        }
+
+        return '+' . $telefone;
+    }
+
+    private function isWhatsAppConfigured(): bool
+    {
+        return filled(config('services.meta_whatsapp.phone_number_id'))
+            && filled(config('services.meta_whatsapp.access_token'))
+            && filled(config('services.meta_whatsapp.template'));
+    }
+
+    private function sendWhatsAppConfirmation(Agendamento $agendamento, string $telefone): void
+    {
+        Http::acceptJson()
+            ->withToken(config('services.meta_whatsapp.access_token'))
+            ->timeout(10)
+            ->post(
+                'https://graph.facebook.com/' . config('services.meta_whatsapp.api_version') . '/' . config('services.meta_whatsapp.phone_number_id') . '/messages',
+                [
+                    'messaging_product' => 'whatsapp',
+                    'recipient_type' => 'individual',
+                    'to' => $telefone,
+                    'type' => 'template',
+                    'template' => [
+                        'name' => config('services.meta_whatsapp.template'),
+                        'language' => [
+                            'code' => config('services.meta_whatsapp.template_language'),
+                        ],
+                        'components' => [
+                            [
+                                'type' => 'body',
+                                'parameters' => [
+                                    ['type' => 'text', 'text' => $agendamento->user?->name ?? 'Cliente'],
+                                    ['type' => 'text', 'text' => Carbon::parse($agendamento->data)->format('d/m/Y')],
+                                    ['type' => 'text', 'text' => substr((string) $agendamento->horario, 0, 5)],
+                                    ['type' => 'text', 'text' => $agendamento->servicoModel?->nome ?? $agendamento->servico],
+                                    ['type' => 'text', 'text' => $agendamento->funcionario?->nome ?? $agendamento->profissional ?? 'Nao informada'],
+                                ],
+                            ],
+                        ],
+                    ],
+                ]
+            )
+            ->throw();
     }
 
     public function updateAgendamento(Request $request, Agendamento $agendamento)

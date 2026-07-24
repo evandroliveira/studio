@@ -39,4 +39,12 @@ return [
         'client_id' => env('GOOGLE_CLIENT_ID'),
     ],
 
+    'meta_whatsapp' => [
+        'phone_number_id' => env('META_WHATSAPP_PHONE_NUMBER_ID'),
+        'access_token' => env('META_WHATSAPP_ACCESS_TOKEN'),
+        'api_version' => env('META_WHATSAPP_API_VERSION', 'v25.0'),
+        'template' => env('META_WHATSAPP_TEMPLATE', 'agendamento_confirmado'),
+        'template_language' => env('META_WHATSAPP_TEMPLATE_LANGUAGE', 'pt_BR'),
+    ],
+
 ];

@@ -55,6 +55,11 @@
                 </div>
 
                 <div class="mb-3">
+                    <label for="telefone" class="form-label">WhatsApp</label>
+                    <input type="tel" class="form-control" id="telefone" name="telefone" value="{{ old('telefone') }}" inputmode="tel" placeholder="(00) 00000-0000" required>
+                </div>
+
+                <div class="mb-3">
                     <label for="password" class="form-label">Senha</label>
                     <div class="input-group password-toggle-group">
                         <input type="password" class="form-control" id="password" name="password" required>
